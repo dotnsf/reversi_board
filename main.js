@@ -31,7 +31,7 @@ getInitBoard = function( size ){
 
 initReversi = function( size ){
   var init_board = getInitBoard( size );
-  var reversi0 = new reversi( null, null, -1, -1, [ -1, -1 ], init_board, -1 );
+  var reversi0 = new reversi( null, null, 0, -1, [ -1, -1 ], init_board, -1 );
 
   return reversi0;
 };
@@ -63,8 +63,8 @@ while( !choice1 ){
 }
 
 //. 選択した手を打つ
-var r1 = new reversi( null, r0.id, r0.depth, idx1, choice1, r0.board, 1 );
+var r1 = new reversi( null, r0.id, r0.depth + 1, idx1, choice1, r0.board, 1 );
 r0.changeStatus( idx1, 1 );
 
-r0.showBoard(); //. [ 2, 0 ] を選択したら [ 2, 3 ] まで反転してしまう・・・
+r0.showBoard();
 r1.showBoard();   

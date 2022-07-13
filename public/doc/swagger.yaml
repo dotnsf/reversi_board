@@ -1,0 +1,154 @@
+swagger: '2.0'
+info:
+  description: Reversi Board API ドキュメント
+  version: 0.0.1
+  title: Reversi Board REST APIs
+host: localhost:8080
+basePath: /api
+tags:
+  - name: reversi
+    description: Reversi related API
+  - name: dbs
+    description: DB related API
+schemes:
+  - http
+  - https
+paths:
+  /reversi/{id}:
+    get:
+      tags:
+        - dbs
+      summary: １データ取得
+      description: １データ取得
+      produces:
+        - application/json
+      parameters:
+        - name: id
+          type: string
+          in: path
+          description: データID
+          required: true
+      responses:
+        '200':
+          description: 成功
+        '400':
+          description: エラー
+  /reversis:
+    get:
+      tags:
+        - dbs
+      summary: 全データ取得
+      description: 全データ取得
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: 成功
+        '400':
+          description: エラー
+  /reversi/start_process:
+    post:
+      tags:
+        - reversi
+      summary: リバーシ初期化
+      description: リバーシ初期化
+      produces:
+        - application/json
+      parameters:
+        - name: body
+          in: body
+          schema:
+            $ref: '#/definitions/ReversiRequest'
+      responses:
+        '200':
+          description: 成功
+        '400':
+          description: エラー
+  /reversi/next_process:
+    post:
+      tags:
+        - reversi
+      summary: リバーシ初期化
+      description: リバーシ初期化
+      produces:
+        - application/json
+      parameters:
+        - name: body
+          in: body
+          schema:
+            $ref: '#/definitions/ReversiRequest'
+      responses:
+        '200':
+          description: 成功
+        '400':
+          description: エラー
+  /reversi/update_process:
+    post:
+      tags:
+        - reversi
+      summary: リバーシ初期化
+      description: リバーシ初期化
+      produces:
+        - application/json
+      parameters:
+        - name: body
+          in: body
+          schema:
+            $ref: '#/definitions/UpdateRequest'
+      responses:
+        '200':
+          description: 成功
+        '400':
+          description: エラー
+definitions:
+  ReversiRequest:
+    type: object
+    properties:
+      size:
+        type: integer
+        description: サイズ(4, 6, or 8)
+  UpdateRequest:
+    type: object
+    properties:
+      reversi:
+        type: object
+        properties:
+          id:
+            type: string
+            description: ID
+          parent_id:
+            type: string
+            description: 親 ID
+          size:
+            type: integer
+            description: サイズ（4, 6, or 8）
+          choice_idx:
+            type: integer
+            description: 選択インデックス
+          choice:
+            type: array
+            description: 選択インデックス
+          board:
+            type: string
+            description: ボード情報
+          next_choices:
+            type: string
+            description: 次手候補
+          next_status:
+            type: string
+            description: 次手解析済み情報
+          next_choices_num:
+            type: integer
+            description: next_choices の配列サイズ
+          next_processed_num:
+            type: integer
+            description: next_status 配列の解析済みサイズ
+          player0_count:
+            type: integer
+            description: 先手番のコマ数
+          player1_count:
+            type: integer
+            description: 後手番のコマ数
+          next_player:
+            type: integer
+            description: 次に選択するプレイヤー(1:先手、-1:後手)

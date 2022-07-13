@@ -1,15 +1,17 @@
 //. reversi.js
 var reversi = class{
-  constructor( id, parent_id, old_depth, choice_idx, choice, board, player ){
+  constructor( id, parent_id, depth, choice_idx, choice, board, player ){
     this.id = ( id || new Date().getTime().toString(16) ) + Math.floor( 1000 * Math.random() ).toString(16);
     this.parent_id = parent_id;
     this.size = board.length;
-    this.depth = old_depth + 1;
+    this.depth = depth;
     this.choice_idx = choice_idx;  //. 同じ parent_id の中で、next_choices の何番目の選択肢を選んだ結果だったのか
     this.choice = choice;  //. [ x, y ]
     this.board = board;  //. [ [ 0, 0, 0, 0, 0, 0, 0, 0 ], .. ]
     this.next_choices = [];  //. [ [ 2, 3 ], .. ]
     this.next_status = [];
+    this.next_choices_num = 0;
+    this.next_processed_num = 0;
     this.player0_count = 0;
     this.player1_count = 0;
 
@@ -18,18 +20,18 @@ var reversi = class{
       var y = choice[0];
       var x = choice[1];
       console.log( 'player='+player+',x='+x+',y='+y );
-      this.board[x][y] = player;
+      this.board[y][x] = player;
 
       //. ひっくり返す
       var other = -1 * player;
 
       if( y > 0 ){
-        if( x > 0 && this.board[x-1][y-1] == other ){
+        if( x > 0 && this.board[y-1][x-1] == other ){
           var c = 2;
           while( c > 1 && ( x - c ) >= 0 && ( y - c ) >= 0 ){
-            if( this.board[x-c][y-c] == player ){
+            if( this.board[y-c][x-c] == player ){
               for( var i = 1; i < c; i ++ ){
-                this.board[x-i][y-i] = player;
+                this.board[y-i][x-i] = player;
               }
 
               c = 0;
@@ -38,12 +40,12 @@ var reversi = class{
           }
         }
 
-        if( board[x][y-1] == other ){
+        if( board[y-1][x] == other ){
           var c = 2;
           while( c > 1 && ( y - c ) >= 0 ){
-            if( board[x][y-c] == player ){
+            if( board[y-c][x] == player ){
               for( var i = 1; i < c; i ++ ){
-                this.board[x][y-i] = player;
+                this.board[y-i][x] = player;
               }
 
               c = 0;
@@ -52,12 +54,12 @@ var reversi = class{
           }
         }
     
-        if( x < this.size - 1 && board[x+1][y-1] == other ){
+        if( x < this.size - 1 && board[y-1][x+i] == other ){
           var c = 2;
           while( c > 1 && ( x + c ) < this.size && ( y - c ) >= 0 ){
-            if( board[x+c][y-c] == player ){
+            if( board[y-c][x+c] == player ){
               for( var i = 1; i < c; i ++ ){
-                this.board[x+i][y-i] = player;
+                this.board[y-i][x+i] = player;
               }
 
               c = 0;
@@ -67,12 +69,12 @@ var reversi = class{
         }
       }
 
-      if( x > 0 && board[x-1][y] == other ){
+      if( x > 0 && board[y][x-1] == other ){
         var c = 2;
         while( c > 1 && ( x - c ) >= 0 ){
-          if( board[x-c][y] == player ){
+          if( board[y][x-c] == player ){
             for( var i = 1; i < c; i ++ ){
-              this.board[x-i][y] = player;
+              this.board[y][x-i] = player;
             }
 
             c = 0;
@@ -81,12 +83,12 @@ var reversi = class{
         }
       }
 
-      if( x < this.size - 1 && board[x+1][y] == other ){
+      if( x < this.size - 1 && board[y][x+1] == other ){
         var c = 2;
         while( c > 1 && ( x + c ) < this.size ){
-          if( board[x+c][y] == player ){
+          if( board[y][x+c] == player ){
             for( var i = 1; i < c; i ++ ){
-              this.board[x+i][y] = player;
+              this.board[y][x+i] = player;
             }
 
             c = 0;
@@ -96,12 +98,12 @@ var reversi = class{
       }
 
       if( y < this.size - 1 ){
-        if( x > 0 && board[x-1][y+1] == other ){
+        if( x > 0 && board[y+1][x-1] == other ){
           var c = 2;
           while( c > 1 && ( x - c ) >= 0 && ( y + c ) < this.size ){
-            if( board[x-c][y+c] == player ){
+            if( board[y+c][x-c] == player ){
               for( var i = 1; i < c; i ++ ){
-                this.board[x-i][y+i] = player;
+                this.board[y+i][x-i] = player;
               }
 
               c = 0;
@@ -110,12 +112,12 @@ var reversi = class{
           }
         }
 
-        if( board[x][y+1] == other ){
+        if( board[y+1][x] == other ){
           var c = 2;
           while( c > 1 && ( y + c ) < this.size ){
-            if( board[x][y+c] == player ){
+            if( board[y+c][x] == player ){
               for( var i = 1; i < c; i ++ ){
-                this.board[x][y+i] = player;
+                this.board[y+i][x] = player;
               }
 
               c = 0;
@@ -124,12 +126,12 @@ var reversi = class{
           }
         }
     
-        if( x < this.size - 1 && board[x+1][y+1] == other ){
+        if( x < this.size - 1 && board[y+1][x+1] == other ){
           var c = 2;
           while( c > 1 && ( x + c ) < this.size && ( y + c ) < this.size ){
-            if( board[x+c][y+c] == player ){
+            if( board[y+c][x+c] == player ){
               for( var i = 1; i < c; i ++ ){
-                this.board[x+i][y+i] = player;
+                this.board[y+i][x+i] = player;
               }
 
               c = 0;
@@ -163,7 +165,10 @@ var reversi = class{
       }
     }
 
-    if( this.next_choices.length == 0 ){
+    this.next_choices_num = this.next_choices.length;
+    this.next_processed_num = 0;
+
+    if( this.next_choices_num == 0 ){
       //. 次の手で相手はパスしかない
       for( var i = 0; i < this.size; i ++ ){
         for( var j = 0; j < this.size; j ++ ){
@@ -174,23 +179,38 @@ var reversi = class{
         }
       }
 
-      if( this.next_choices.length == 0 ){
-        //. 次の手は自分もパスしかない
+      this.next_choices_num = this.next_choices.length;
+      this.next_processed_num = 0;
+
+      if( this.next_choices_num == 0 ){
+        //. 次の手は自分もパスしかない = ゲーム終了
+        this.next_player = 0;
         this.showBoard( true );
       }else{
-        this.player = player;
+        this.next_player = player;
       }
     }else{
-      this.player = other_player;
+      this.next_player = other_player;
     }
   };
 
   changeStatus( idx, new_status ){
     //. new_status: 0=未処理, -1=処理中, 1=処理済み
     this.next_status[idx] = new_status;
+
+    if( new_status == 1 ){
+      this.next_processed_num ++;
+    }
   }
 
   showBoard( game_end ){
+    console.log( '' );
+    console.log( 'parent_id = ' + this.parent_id );
+    console.log( 'size = ' + this.size );
+    console.log( 'depth = ' + this.depth );
+    console.log( 'choice_idx = ' + this.choice_idx );
+    console.log( 'choices_num = ' + this.next_choices_num );
+    console.log( 'processed_num = ' + this.next_processed_num );
     console.log( '' );
 
     for( var i = 0; i < this.size; i ++ ){
@@ -218,12 +238,12 @@ var reversi = class{
     console.log( '' );
     console.log( '● Player 0: ' + this.player0_count );
     console.log( '○ Player 1: ' + this.player1_count );
-    console.log( 'Next : Player ' + ( this.player == 1 ? '0 ●' : '1 ○' ) );
+    console.log( 'Next : Player ' + ( this.next_player == 1 ? '0 ●' : '1 ○' ) );
 
     console.log( '' );
     console.log( 'Choices:' );
     for( var i = 0; i < this.next_choices.length; i ++ ){
-      console.log( ' ' + i + ' : ' + JSON.stringify( this.next_choices[i] ) + ' (' + this.next_status[i] + ')' );
+      console.log( ' ' + i + ' : [ ' + this.next_choices[i][1] + ', ' + this.next_choices[i][0] + ' ] (' + this.next_status[i] + ')' );
     }
 
     if( game_end ){
