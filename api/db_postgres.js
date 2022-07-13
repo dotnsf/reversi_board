@@ -197,7 +197,7 @@ api.readReversis = async function( limit, offset ){
       conn = await pg.connect();
       if( conn ){
         try{
-          var sql = "select * from reversis order by updated";
+          var sql = "select * from reversi order by updated";
           if( limit ){
             sql += " limit " + limit;
           }
@@ -238,7 +238,7 @@ api.startProcess = async function( size ){
         if( conn ){
           try{
             //. 指定サイズのデータが存在していないことを確認してから作成する
-            var sql = "select * from reversis where size = " + size;
+            var sql = "select * from reversi where size = " + size;
             var query = { text: sql, values: [] };
             conn.query( query, function( err, result ){
               if( err ){
@@ -550,6 +550,40 @@ api.deleteReversis = async function(){
 };
 
 
+api.post( '/reversi/start_process', async function( req, res ){
+  res.contentType( 'application/json; charset=utf-8' );
+
+  var size = parseInt( req.body.size );
+  api.startProcess( size ).then( function( result ){
+    res.status( result.status ? 200 : 400 );
+    res.write( JSON.stringify( result, null, 2 ) );
+    res.end();
+  });
+});
+
+api.post( '/reversi/next_process', async function( req, res ){
+  res.contentType( 'application/json; charset=utf-8' );
+
+  var size = parseInt( req.body.size );
+  api.nextProcess( size ).then( function( result ){
+    res.status( result.status ? 200 : 400 );
+    res.write( JSON.stringify( result, null, 2 ) );
+    res.end();
+  });
+});
+
+api.post( '/reversi/update_process', async function( req, res ){
+  res.contentType( 'application/json; charset=utf-8' );
+
+  var reversi = req.body.reversi;
+  api.updateProcess( reversi ).then( function( result ){
+    res.status( result.status ? 200 : 400 );
+    res.write( JSON.stringify( result, null, 2 ) );
+    res.end();
+  });
+});
+
+
 api.post( '/reversi', async function( req, res ){
   res.contentType( 'application/json; charset=utf-8' );
 
@@ -597,39 +631,6 @@ api.get( '/reversis', async function( req, res ){
   api.readReversis( limit, offset ).then( function( results ){
     res.status( results.status ? 200 : 400 );
     res.write( JSON.stringify( results, null, 2 ) );
-    res.end();
-  });
-});
-
-api.post( '/reversi/start_process', async function( req, res ){
-  res.contentType( 'application/json; charset=utf-8' );
-
-  var size = parseInt( req.body.size );
-  api.startProcess( size ).then( function( result ){
-    res.status( result.status ? 200 : 400 );
-    res.write( JSON.stringify( result, null, 2 ) );
-    res.end();
-  });
-});
-
-api.post( '/reversi/next_process', async function( req, res ){
-  res.contentType( 'application/json; charset=utf-8' );
-
-  var size = parseInt( req.body.size );
-  api.nextProcess( size ).then( function( result ){
-    res.status( result.status ? 200 : 400 );
-    res.write( JSON.stringify( result, null, 2 ) );
-    res.end();
-  });
-});
-
-api.post( '/reversi/update_process', async function( req, res ){
-  res.contentType( 'application/json; charset=utf-8' );
-
-  var reversi = req.body.reversi;
-  api.updateProcess( reversi ).then( function( result ){
-    res.status( result.status ? 200 : 400 );
-    res.write( JSON.stringify( result, null, 2 ) );
     res.end();
   });
 });

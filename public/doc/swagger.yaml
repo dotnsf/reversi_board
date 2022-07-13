@@ -33,12 +33,42 @@ paths:
           description: 成功
         '400':
           description: エラー
+    delete:
+      tags:
+        - dbs
+      summary: １データ削除
+      description: １データ削除
+      produces:
+        - application/json
+      parameters:
+        - name: id
+          type: string
+          in: path
+          description: データID
+          required: true
+      responses:
+        '200':
+          description: 成功
+        '400':
+          description: エラー
   /reversis:
     get:
       tags:
         - dbs
       summary: 全データ取得
       description: 全データ取得
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: 成功
+        '400':
+          description: エラー
+    delete: 
+      tags:
+        - dbs
+      summary: 全データ削除
+      description: 全データ削除
       produces:
         - application/json
       responses:

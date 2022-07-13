@@ -3,8 +3,8 @@ var express = require( 'express' ),
     session = require( 'express-session' ),
     app = express();
 
-var db = require( './api/db_postgres' );
-app.use( '/api/db', db );
+var api = require( './api/db_postgres' );
+app.use( '/api', api );
 
 app.use( express.Router() );
 app.use( express.static( __dirname + '/public' ) );
