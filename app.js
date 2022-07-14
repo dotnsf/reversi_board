@@ -1,5 +1,6 @@
 //. app.js
 var express = require( 'express' ),
+    ejs = require( 'ejs' ),
     session = require( 'express-session' ),
     app = express();
 
@@ -8,6 +9,18 @@ app.use( '/api', api );
 
 app.use( express.Router() );
 app.use( express.static( __dirname + '/public' ) );
+
+app.set( 'views', __dirname + '/views' );
+app.set( 'view engine', 'ejs' );
+
+var BOARD_SIZE = 4;
+var _BOARD_SIZE = 'BOARD_SIZE' in process.env ? process.env.BOARD_SIZE : ''; 
+try{
+  if( _BOARD_SIZE ){
+    BOARD_SIZE = parseInt( _BOARD_SIZE );
+  }
+}catch( e ){
+}
 
 //. Session
 var sess = {
@@ -22,9 +35,12 @@ var sess = {
 app.use( session( sess ) );
 
 app.get( '/', function( req, res ){
+  /*
   res.contentType( 'application/json; charset=utf-8' );
   res.write( JSON.stringify( { status: true }, null, 2 ) );
   res.end();
+  */
+  res.render( 'index', { board_size: BOARD_SIZE } );
 });
 
 

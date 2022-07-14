@@ -244,14 +244,23 @@ api.startProcess = async function( size ){
               if( err ){
                 resolve( { status: false, error: err } );
               }else{
-                var reversi1 = initReversi( size );
-                this.createReversi( reversi1 ).then( async function( result ){
-                  if( result && result.status ){
-                    resolve( { status: true, result: reversi1 } );
-                  }else{
-                    resolve( { status: false, error: 'create reversi0 failed.' } );
-                  }
-                });
+                if( result.rows.length == 0 ){
+                  var reversi1 = initReversi( size );
+                  this.createReversi( reversi1 ).then( async function( result ){
+                    if( result && result.status ){
+                      resolve( { status: true, result: reversi1 } );
+                    }else{
+                      resolve( { status: false, error: 'create reversi0 failed.' } );
+                    }
+                  });
+                }else{
+                  var reversi1 = result.rows[0];   //. board や next_choices, next_status などが文字列のまま
+                  reversi1.board = JSON.parse( reversi1.board );
+                  reversi1.next_choices = JSON.parse( reversi1.next_choices );
+                  reversi1.next_status = JSON.parse( reversi1.next_status );
+                  reversi1.next_choices_num = reversi1.next_choices.length;
+                  resolve( { status: true, result: reversi1 } );
+                }
               }
             });
           }catch( e ){
@@ -285,6 +294,9 @@ api.nextProcess = async function( size ){
           //.   ( next_choices_num > 0 && next_processed_num == 0 ) のレコードを depth, choice_idx の昇順に並べた最初のレコードで 0 番目の戦略を新規に子レコードとして作成する
           //. 1 件以上の場合（おそらく 1 件）、
           //.   その中から先頭の１件を取り出して、next_processed_num 番目の戦略を新規に子レコードとして作成する
+
+          //. start_process 直後の初期 reversi が next_choices_num = null となってしまっていて、現在のアルゴリズムだと「解析終了」と判断されてしまう？？
+          //. next_choices_num が初期値のまま作成されて計算されていない？
           var sql = "select * from reversi where size = $1 and next_choices_num > 0 and next_choices_num > next_processed_num order by depth, choice_idx";
           var query = { text: sql, values: [ size ] };
           conn.query( query, ( err, result ) => {
@@ -301,12 +313,13 @@ api.nextProcess = async function( size ){
                     console.log( err );
                     resolve( { status: false, error: err } );
                   }else{
+                    console.log( { result } );
                     if( result.rows.length == 0 ){
                       //. 解析終了？
                       resolve( { status: true, result: null } );
                     }else{
                       var r0 = result.rows[0];   
-                      var reversi0 = new Reversi( r0.id, r0.parent_id, r0.depth, r0.choice_idx, [ -1, -1 ]/*r0.next_choices[0]*/, r0.board, r0.next_player );
+                      var reversi0 = new Reversi( r0.id, r0.parent_id, r0.depth, r0.choice_idx, [ -1, -1 ], r0.board, r0.next_player );
                       reversi0.changeStatus( 0, -1 );
                       this.updateReversi( reversi0.id, JSON.stringify( reversi0.next_status ), reversi0.next_processed_num ).then( function( result ){
                         if( result && result.status ){
