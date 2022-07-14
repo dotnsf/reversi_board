@@ -287,7 +287,7 @@ api.nextProcess = async function( size ){
           //.   その中から先頭の１件を取り出して、next_processed_num 番目の戦略を新規に子レコードとして作成する
           var sql = "select * from reversi where size = $1 and next_choices_num > 0 and next_choices_num > next_processed_num order by depth, choice_idx";
           var query = { text: sql, values: [ size ] };
-          conn.query( query, function( err, result ){
+          conn.query( query, ( err, result ) => {
             if( err ){
               console.log( err );
               resolve( { status: false, error: err } );
@@ -296,7 +296,7 @@ api.nextProcess = async function( size ){
               if( result.rows.length == 0 ){
                 sql = "select * from reversi where size = $1 and next_choices_num > 0 and next_processed_num = 0 order by depth, choice_idx";
                 query = { text: sql, values: [ size ] };
-                conn.query( query, function( err, result ){
+                conn.query( query, ( err, result ) => {
                   if( err ){
                     console.log( err );
                     resolve( { status: false, error: err } );
@@ -363,7 +363,7 @@ api.updateProcess = async function( reversi1 ){
       conn = await pg.connect();
       if( conn ){
         try{
-          this.createReversi( reversi1 ).then( async function( result ){
+          this.createReversi( reversi1 ).then( async ( result ) => {
             if( result && result.status ){
               //. 最後に親レコードのステータスを更新する
               var id = reversi1.parent_id;
