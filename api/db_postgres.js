@@ -6,7 +6,7 @@ var express = require( 'express' ),
 
     api = express();
 
-var Reversi = require( '../reversi' );
+var Reversi = require( '../public/reversi' );
 
 process.env.PGSSLMODE = 'no-verify';
 var PG = require( 'pg' );
@@ -240,7 +240,7 @@ api.startProcess = async function( size ){
             //. 指定サイズのデータが存在していないことを確認してから作成する
             var sql = "select * from reversi where size = " + size;
             var query = { text: sql, values: [] };
-            conn.query( query, function( err, result ){
+            conn.query( query, ( err, result ) => {
               if( err ){
                 resolve( { status: false, error: err } );
               }else{

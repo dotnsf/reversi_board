@@ -98,8 +98,8 @@ paths:
     post:
       tags:
         - reversi
-      summary: リバーシ初期化
-      description: リバーシ初期化
+      summary: リバーシ解析参加
+      description: リバーシ解析参加
       produces:
         - application/json
       parameters:
@@ -116,8 +116,8 @@ paths:
     post:
       tags:
         - reversi
-      summary: リバーシ初期化
-      description: リバーシ初期化
+      summary: リバーシ解析結果登録
+      description: リバーシ解析結果登録
       produces:
         - application/json
       parameters:
