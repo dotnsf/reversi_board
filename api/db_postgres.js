@@ -76,7 +76,7 @@ api.createReversi = async function( reversi ){
           reversi.created = t;
           reversi.updated = t;
           //console.log( reversi );
-          var query = { text: sql, values: [ reversi.id, reversi.parent_id, reversi.size, reversi.choice_idx, reversi.choice[0], reversi.choice[1], JSON.stringify( reversi.board ), JSON.stringify( reversi.next_choices ), JSON.stringify( reversi.next_status ), reversi.next_choice_num, reversi.next_processed_num, reversi.player0_count, reversi.player1_count, reversi.next_player, reversi.created, reversi.updated ] };
+          var query = { text: sql, values: [ reversi.id, reversi.parent_id, reversi.size, reversi.choice_idx, reversi.choice[0], reversi.choice[1], JSON.stringify( reversi.board ), JSON.stringify( reversi.next_choices ), JSON.stringify( reversi.next_status ), reversi.next_choices_num, reversi.next_processed_num, reversi.player0_count, reversi.player1_count, reversi.next_player, reversi.created, reversi.updated ] };
           conn.query( query, function( err, result ){
             if( err ){
               console.log( err );
@@ -246,6 +246,8 @@ api.startProcess = async function( size ){
               }else{
                 if( result.rows.length == 0 ){
                   var reversi1 = initReversi( size );
+                  //console.log( { reversi1 } );   //. この時点での reversi1 は正しいフォーマットになっている
+                                                   //. でも DB に格納されているデータは next_choices_num = null になってしまっている？？
                   this.createReversi( reversi1 ).then( async function( result ){
                     if( result && result.status ){
                       resolve( { status: true, result: reversi1 } );
