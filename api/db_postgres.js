@@ -725,7 +725,7 @@ function getInitBoard( board_size ){
 
 function initReversi( board_size ){
   var init_board = getInitBoard( board_size );
-  var reversi0 = new Reversi( null, null, 0, -1, [ -1, -1 ], init_board, -1 );
+  var reversi0 = new Reversi( null, null, 0, -1, [ -1, -1 ], init_board, 1 );
 
   return reversi0;
 };

@@ -14,6 +14,7 @@ var reversi = class{
     this.next_processed_num = 0;
     this.player0_count = 0;
     this.player1_count = 0;
+    this.next_player = player;
 
     //. choice = [ x, y ]
     if( choice[0] > -1 && choice[1] > -1 && this.board[choice[1]][choice[0]] == 0 ){
@@ -140,6 +141,8 @@ var reversi = class{
           }
         }
       }
+
+      this.next_player *= -1;
     }
 
     //. count
@@ -158,7 +161,7 @@ var reversi = class{
     //. find nexts;
     for( var i = 0; i < this.board_size; i ++ ){
       for( var j = 0; j < this.board_size; j ++ ){
-        if( this.board[i][j] == 0 && this.playerChoicable( j, i, other_player )){
+        if( this.board[i][j] == 0 && this.playerChoicable( j, i, this.next_player )){
           this.next_choices.push( [ j, i ] );
           this.next_status.push( 0 );
         }
@@ -170,9 +173,10 @@ var reversi = class{
 
     if( this.next_choices_num == 0 ){
       //. 次の手で相手はパスしかない
+      this.next_player *= -1;
       for( var i = 0; i < this.board_size; i ++ ){
         for( var j = 0; j < this.board_size; j ++ ){
-          if( this.board[i][j] == 0 && this.playerChoicable( j, i, player )){
+          if( this.board[i][j] == 0 && this.playerChoicable( j, i, this.next_player )){
             this.next_choices.push( [ j, i ] );
             this.next_status.push( 0 );
           }
@@ -186,11 +190,9 @@ var reversi = class{
         //. 次の手は自分もパスしかない = ゲーム終了
         this.next_player = 0;
         this.showBoard( true );
-      }else{
-        this.next_player = player;
       }
     }else{
-      this.next_player = other_player;
+      //this.next_player = other_player;
     }
   };
 
