@@ -383,10 +383,11 @@ api.updateProcess = async function( reversi1 ){
             if( result && result.status ){
               //. 最後に親レコードのステータスを更新する
               var id = reversi1.parent_id;
+              var choice_idx = reversi1.choice_idx;
               if( id ){
                 var r0 = await this.readReversi( id );
                 var reversi0 = new Reversi( r0.id, r0.parent_id, r0.depth, r0.choice_idx, [ -1, -1 ], r0.board, r0.next_player );
-                reversi0.changeStatus( 0, 1 );
+                reversi0.changeStatus( choice_idx, 1 );
                 this.updateReversi( reversi0.id, reversi0.next_status, reversi0.next_processed_num ).then( function( result ){
                   if( result && result.status ){
                     resolve( { status: true, result: reversi1 } );

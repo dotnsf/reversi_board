@@ -5,6 +5,7 @@
 <script type="text/javascript" src="//code.jquery.com/jquery-2.2.4.min.js"></script>
 <link href="//maxcdn.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" rel="stylesheet"/>
 <script src="//maxcdn.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
+<script src="./cvi_busy_lib.js"></script>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 
 <!--
@@ -45,6 +46,7 @@ $(function(){
 });
 
 function nextProcess(){
+  var obj = getBusyOverlay( 'viewport', {color:'black', opacity:0.5, text:'処理中・・', style:'text-decoration:blink; font-weight:bold; font-size:12px; color:white;' } );
   $.ajax({
     url: '/api/reversi/next_process',
     type: 'POST',
@@ -52,11 +54,49 @@ function nextProcess(){
     success: function( result ){
       if( result && result.status ){
         var r0 = result.result;
-        console.log( { r0 } );
-        $('#main_reversi').html( JSON.stringify( r0, null, 2 ) );
+
+        //$('#main_reversi').html( JSON.stringify( r0, null, 2 ) );
+        if( r0.next_status && r0.next_status.length ){
+          var idx = -1;
+          for( var i = 0; i < r0.next_status.length && idx == -1; i ++ ){
+            if( r0.next_status[i] != -1 ){
+              idx = i;
+            }
+          }
+
+          if( idx > -1 ){
+            var choice = r0.next_choices[idx];
+            //var choice_x = choice[1];
+            //var choice_y = choice[0];
+
+            var reversi1 = new Reversi( null, r0.id, r0.depth + 1, idx, choice, r0.board, r0.next_player );
+            //r0.changeStatus( idx, 1 );
+
+            //. この状態の reversi1 と r0 を DB に保存する（ reversi1 を upateProcess で作成すると r0 も更新される）
+            $.ajax({
+              url: '/api/reversi/update_process',
+              type: 'POST',
+              data: { reversi: reversi1 },
+              success: function( result ){
+                obj.remove();
+                console.log( result );
+                alert( 'done' );
+                location.href = '/';
+              },
+              error: function( e0, e1, e2 ){
+                obj.remove();
+                console.log( e0, e1, e2 );
+              }
+            });
+          }else{
+            alert( '演算対象の選択肢が見つかりませんでした。' );
+            obj.remove();
+          }
+        }
       }
     },
     error: function( e0, e1, e2 ){
+      obj.remove();
       console.log( e0, e1, e2 );
     }
   });
