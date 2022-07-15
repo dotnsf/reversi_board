@@ -531,13 +531,16 @@ api.deleteReversi = async function( reversi_id ){
   });
 };
 
-api.deleteReversis = async function(){
+api.deleteReversis = async function( board_size ){
   return new Promise( async ( resolve, reject ) => {
     if( pg ){
       conn = await pg.connect();
       if( conn ){
         try{
           var sql = "delete from reversi";
+          if( board_size ){
+            sql += " where board_size = " + board_size;
+          }
           var query = { text: sql, values: [] };
           conn.query( query, function( err, result ){
             if( err ){
@@ -688,7 +691,15 @@ api.delete( '/reversi/:id', async function( req, res ){
 api.delete( '/reversis', function( req, res ){
   res.contentType( 'application/json; charset=utf-8' );
 
-  api.deleteReversis().then( function( result ){
+  var board_size = 0;
+  if( req.body.board_size ){
+    var _board_size = req.body.board_size;
+    try{
+      board_size = parseInt( _board_size );
+    }catch( e ){
+    }
+  }
+  api.deleteReversis( board_size ).then( function( result ){
     res.status( result.status ? 200 : 400 );
     res.write( JSON.stringify( result, null, 2 ) );
     res.end();

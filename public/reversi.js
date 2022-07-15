@@ -1,9 +1,10 @@
 //. reversi.js
 var reversi = class{
   constructor( id, parent_id, depth, choice_idx, choice, board, player ){
+    console.log( 'board', board );  //. undefined ??
     this.id = ( id ? id : ( new Date().getTime().toString(16) ) + Math.floor( 1000 * Math.random() ).toString(16) );
     this.parent_id = parent_id;
-    this.board_size = board.length;
+    this.board_size = board.length;  //. "Cannot read property 'length' of undefined"
     this.depth = depth;
     this.choice_idx = choice_idx;  //. 同じ parent_id の中で、next_choices の何番目の選択肢を選んだ結果だったのか
     this.choice = choice;  //. [ x, y ]

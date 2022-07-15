@@ -8,6 +8,8 @@
 
 ## 現時点での問題点
 
+reversi.js L.9 の board.length が見つからない？（ board が undefined？）
+
 
 ## Licensing
 

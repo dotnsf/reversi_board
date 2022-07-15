@@ -71,6 +71,11 @@ paths:
       description: 全データ削除
       produces:
         - application/json
+      parameters:
+        - name: body
+          in: body
+          schema:
+            $ref: '#/definitions/ReversiRequest'
       responses:
         '200':
           description: 成功
