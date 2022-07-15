@@ -32,7 +32,7 @@ $(function(){
   $.ajax({
     url: '/api/reversi/start_process',
     type: 'POST',
-    data: { size: <%= board_size %> },
+    data: { board_size: <%= board_size %> },
     success: function( result ){
       main_reversi = result.result;
       console.log( main_reversi );
@@ -48,7 +48,7 @@ function nextProcess(){
   $.ajax({
     url: '/api/reversi/next_process',
     type: 'POST',
-    data: { size: <%= board_size %> },
+    data: { board_size: <%= board_size %> },
     success: function( result ){
       if( result && result.status ){
         var r0 = result.result;

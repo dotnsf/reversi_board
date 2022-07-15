@@ -1,13 +1,13 @@
 //. main.js
 var reversi = require( './reversi' );
 
-getInitBoard = function( size ){
+getInitBoard = function( board_size ){
   var init_board = null;
 
-  if( size == 4 || size == 6 || size == 8 ){
-    var padding = ( size / 2 ) - 1;
+  if( board_size == 4 || board_size == 6 || board_size == 8 ){
+    var padding = ( board_size / 2 ) - 1;
     var padding_line = [];
-    for( var i = 0; i < size; i ++ ){
+    for( var i = 0; i < board_size; i ++ ){
       padding_line.push( 0 );
     }
     var line1 = [ 1, -1 ];
@@ -29,8 +29,8 @@ getInitBoard = function( size ){
   return init_board;
 };
 
-initReversi = function( size ){
-  var init_board = getInitBoard( size );
+initReversi = function( board_size ){
+  var init_board = getInitBoard( board_size );
   var reversi0 = new reversi( null, null, 0, -1, [ -1, -1 ], init_board, -1 );
 
   return reversi0;

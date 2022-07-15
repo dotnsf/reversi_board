@@ -61,14 +61,14 @@ api.use( bodyParser.json( { limit: '10mb' }) );
 api.use( express.Router() );
 
 //. Create
-//. 初期状態は全ての size であらかじめ格納済みにしておく必要あり
+//. 初期状態は全ての board_size であらかじめ格納済みにしておく必要あり
 api.createReversi = async function( reversi ){
   return new Promise( async ( resolve, reject ) => {
     if( pg ){
       conn = await pg.connect();
       if( conn ){
         try{
-          var sql = 'insert into reversi( id, parent_id, size, choice_idx, choice_x, choice_y, board, next_choices, next_status, next_choices_num, next_processed_num, player0_count, player1_count, next_player, created, updated ) values ( $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16 )';
+          var sql = 'insert into reversi( id, parent_id, board_size, depth, choice_idx, choice_x, choice_y, board, next_choices, next_status, next_choices_num, next_processed_num, player0_count, player1_count, next_player, created, updated ) values ( $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17 )';
           if( !reversi.id ){
             reversi.id = uuidv4();
           }
@@ -76,7 +76,7 @@ api.createReversi = async function( reversi ){
           reversi.created = t;
           reversi.updated = t;
           //console.log( reversi );
-          var query = { text: sql, values: [ reversi.id, reversi.parent_id, reversi.size, reversi.choice_idx, reversi.choice[0], reversi.choice[1], JSON.stringify( reversi.board ), JSON.stringify( reversi.next_choices ), JSON.stringify( reversi.next_status ), reversi.next_choices_num, reversi.next_processed_num, reversi.player0_count, reversi.player1_count, reversi.next_player, reversi.created, reversi.updated ] };
+          var query = { text: sql, values: [ reversi.id, reversi.parent_id, reversi.board_size, reversi.depth, reversi.choice_idx, reversi.choice[0], reversi.choice[1], JSON.stringify( reversi.board ), JSON.stringify( reversi.next_choices ), JSON.stringify( reversi.next_status ), reversi.next_choices_num, reversi.next_processed_num, reversi.player0_count, reversi.player1_count, reversi.next_player, reversi.created, reversi.updated ] };
           conn.query( query, function( err, result ){
             if( err ){
               console.log( err );
@@ -230,24 +230,23 @@ api.readReversis = async function( limit, offset ){
   });
 };
 
-api.startProcess = async function( size ){
+api.startProcess = async function( board_size ){
   return new Promise( async ( resolve, reject ) => {
     if( pg ){
-      if( size == 4 || size == 6 || size == 8 ){
+      if( board_size == 4 || board_size == 6 || board_size == 8 ){
         conn = await pg.connect();
         if( conn ){
           try{
             //. 指定サイズのデータが存在していないことを確認してから作成する
-            var sql = "select * from reversi where size = " + size;
+            var sql = "select * from reversi where board_size = " + board_size;
             var query = { text: sql, values: [] };
             conn.query( query, ( err, result ) => {
               if( err ){
                 resolve( { status: false, error: err } );
               }else{
                 if( result.rows.length == 0 ){
-                  var reversi1 = initReversi( size );
-                  //console.log( { reversi1 } );   //. この時点での reversi1 は正しいフォーマットになっている
-                                                   //. でも DB に格納されているデータは next_choices_num = null になってしまっている？？
+                  var reversi1 = initReversi( board_size );
+                  //console.log( { reversi1 } );
                   this.createReversi( reversi1 ).then( async function( result ){
                     if( result && result.status ){
                       resolve( { status: true, result: reversi1 } );
@@ -277,7 +276,7 @@ api.startProcess = async function( size ){
           resolve( { status: false, error: 'db not ready.' } );
         }
       }else{
-        resolve( { status: false, error: 'no proper size.' } );
+        resolve( { status: false, error: 'no proper board_size.' } );
       }
     }else{
       resolve( { status: false, error: 'no connection.' } );
@@ -285,13 +284,16 @@ api.startProcess = async function( size ){
   });
 };
 
-api.nextProcess = async function( size ){
+api.nextProcess = async function( board_size ){
+  //. startProcess はおそらく問題なし
+  //. nextProcess を実行しても DB 内データに（next_status は "[0,0,0,0]" から "[-1,0,0,0]" に変化しているべきなのに）変化なし
+  //. （DB 内データは next_choices = "[[2,0],[3,1],[0,2],[1,3]]", next_status="[-1,0,0,0]", next_choices_num=4 になっているべきなのに）UI 上では next_choices = [],  next_status = [-1], next_choices_num = 0 になっている
   return new Promise( async ( resolve, reject ) => {
     if( pg ){
       conn = await pg.connect();
       if( conn ){
         try{
-          //. 特定の size 値を持っているレコードの中で、 ( next_choices_num > 0 && next_choices_num > next_processed_num ) を満たしているレコードが、、、
+          //. 特定の board_size 値を持っているレコードの中で、 ( next_choices_num > 0 && next_choices_num > next_processed_num ) を満たしているレコードが、、、
           //. 0 件の場合（新しい子レコードを「どこかのレコードの下に」作成する必要がある）、
           //.   ( next_choices_num > 0 && next_processed_num == 0 ) のレコードを depth, choice_idx の昇順に並べた最初のレコードで 0 番目の戦略を新規に子レコードとして作成する
           //. 1 件以上の場合（おそらく 1 件）、
@@ -299,31 +301,29 @@ api.nextProcess = async function( size ){
 
           //. start_process 直後の初期 reversi が next_choices_num = null となってしまっていて、現在のアルゴリズムだと「解析終了」と判断されてしまう？？
           //. next_choices_num が初期値のまま作成されて計算されていない？
-          var sql = "select * from reversi where size = $1 and next_choices_num > 0 and next_choices_num > next_processed_num order by depth, choice_idx";
-          var query = { text: sql, values: [ size ] };
+          var sql = "select * from reversi where board_size = $1 and next_choices_num > 0 and next_choices_num > next_processed_num order by depth, choice_idx";
+          var query = { text: sql, values: [ board_size ] };
           conn.query( query, ( err, result ) => {
             if( err ){
               console.log( err );
               resolve( { status: false, error: err } );
             }else{
-              console.log( { result } );
               if( result.rows.length == 0 ){
-                sql = "select * from reversi where size = $1 and next_choices_num > 0 and next_processed_num = 0 order by depth, choice_idx";
-                query = { text: sql, values: [ size ] };
+                sql = "select * from reversi where board_size = $1 and next_choices_num > 0 and next_processed_num = 0 order by depth, choice_idx";
+                query = { text: sql, values: [ board_size ] };
                 conn.query( query, ( err, result ) => {
                   if( err ){
                     console.log( err );
                     resolve( { status: false, error: err } );
                   }else{
-                    console.log( { result } );
                     if( result.rows.length == 0 ){
                       //. 解析終了？
                       resolve( { status: true, result: null } );
                     }else{
                       var r0 = result.rows[0];   
-                      var reversi0 = new Reversi( r0.id, r0.parent_id, r0.depth, r0.choice_idx, [ -1, -1 ], r0.board, r0.next_player );
+                      var reversi0 = new Reversi( r0.id, r0.parent_id, r0.depth, r0.choice_idx, [ -1, -1 ], JSON.parse( r0.board ), r0.next_player );
                       reversi0.changeStatus( 0, -1 );
-                      this.updateReversi( reversi0.id, JSON.stringify( reversi0.next_status ), reversi0.next_processed_num ).then( function( result ){
+                      this.updateReversi( reversi0.id, reversi0.next_status, reversi0.next_processed_num ).then( function( result ){
                         if( result && result.status ){
                           //. 0 番目の選択はクライアント側で処理してもらうので、この状態の reversi0 を返す
                           resolve( { status: true, result: reversi0 } );
@@ -342,9 +342,10 @@ api.nextProcess = async function( size ){
                 });
               }else{
                 var r0 = result.rows[0];   
-                var reversi0 = new Reversi( r0.id, r0.parent_id, r0.depth, r0.choice_idx, [ -1, -1 ]/*r0.next_choices[r0.next_processed_num]*/, r0.board, r0.next_player );
+                var reversi0 = new Reversi( r0.id, r0.parent_id, r0.depth, r0.choice_idx, [ -1, -1 ]/*r0.next_choices[r0.next_processed_num]*/, JSON.parse( r0.board ), r0.next_player );
                 reversi0.changeStatus( r0.next_processed_num, -1 );
-                this.updateReversi( reversi0.id, JSON.stringify( reversi0.next_status ), reversi0.next_processed_num ).then( function( result ){
+                //this.updateReversi( reversi0.id, reversi0.next_status, reversi0.next_processed_num ).then( function( result ){
+                api.updateReversi( reversi0.id, reversi0.next_status, reversi0.next_processed_num ).then( function( result ){
                   if( result && result.status ){
                     //. next_processed_num 番目の選択はクライアント側で処理してもらうので、この状態の reversi0 を返す
                     resolve( { status: true, result: reversi0 } );
@@ -386,7 +387,7 @@ api.updateProcess = async function( reversi1 ){
                 var r0 = await this.readReversi( id );
                 var reversi0 = new Reversi( r0.id, r0.parent_id, r0.depth, r0.choice_idx, [ -1, -1 ], r0.board, r0.next_player );
                 reversi0.changeStatus( 0, 1 );
-                this.updateReversi( reversi0.id, JSON.stringify( reversi0.next_status ), reversi0.next_processed_num ).then( function( result ){
+                this.updateReversi( reversi0.id, reversi0.next_status, reversi0.next_processed_num ).then( function( result ){
                   if( result && result.status ){
                     resolve( { status: true, result: reversi1 } );
                   }else{
@@ -467,10 +468,8 @@ api.updateReversi = async function( reversi_id, reversi_next_status, reversi_nex
         }else{
           try{
             var sql = 'update reversi set next_status = $1, next_processed_num = $2, updated = $3 where id = $4';
-            //var sql = "select * from items";
             var t = ( new Date() ).getTime();
             var query = { text: sql, values: [ JSON.stringify( reversi_next_status ), reversi_next_processed_num, t, reversi_id ] };
-            //console.log( {query} );
             conn.query( query, function( err, result ){
               if( err ){
                 console.log( err );
@@ -511,7 +510,7 @@ api.deleteReversi = async function( reversi_id ){
               console.log( err );
               resolve( { status: false, error: err } );
             }else{
-              resolve( { status: true, result: result } );
+              resolve( { status: true/*, result: result*/ } );
             }
           });
         }catch( e ){
@@ -544,7 +543,7 @@ api.deleteReversis = async function(){
               console.log( err );
               resolve( { status: false, error: err } );
             }else{
-              resolve( { status: true, result: result } );
+              resolve( { status: true/*, result: result*/ } );
             }
           });
         }catch( e ){
@@ -568,8 +567,8 @@ api.deleteReversis = async function(){
 api.post( '/reversi/start_process', async function( req, res ){
   res.contentType( 'application/json; charset=utf-8' );
 
-  var size = parseInt( req.body.size );
-  api.startProcess( size ).then( function( result ){
+  var board_size = parseInt( req.body.board_size );
+  api.startProcess( board_size ).then( function( result ){
     res.status( result.status ? 200 : 400 );
     res.write( JSON.stringify( result, null, 2 ) );
     res.end();
@@ -579,8 +578,8 @@ api.post( '/reversi/start_process', async function( req, res ){
 api.post( '/reversi/next_process', async function( req, res ){
   res.contentType( 'application/json; charset=utf-8' );
 
-  var size = parseInt( req.body.size );
-  api.nextProcess( size ).then( function( result ){
+  var board_size = parseInt( req.body.board_size );
+  api.nextProcess( board_size ).then( function( result ){
     res.status( result.status ? 200 : 400 );
     res.write( JSON.stringify( result, null, 2 ) );
     res.end();
@@ -696,13 +695,13 @@ api.delete( '/reversis', function( req, res ){
 });
 
 
-function getInitBoard( size ){
+function getInitBoard( board_size ){
   var init_board = null;
 
-  if( size == 4 || size == 6 || size == 8 ){
-    var padding = ( size / 2 ) - 1;
+  if( board_size == 4 || board_size == 6 || board_size == 8 ){
+    var padding = ( board_size / 2 ) - 1;
     var padding_line = [];
-    for( var i = 0; i < size; i ++ ){
+    for( var i = 0; i < board_size; i ++ ){
       padding_line.push( 0 );
     }
     var line1 = [ 1, -1 ];
@@ -724,8 +723,8 @@ function getInitBoard( size ){
   return init_board;
 };
 
-function initReversi( size ){
-  var init_board = getInitBoard( size );
+function initReversi( board_size ){
+  var init_board = getInitBoard( board_size );
   var reversi0 = new Reversi( null, null, 0, -1, [ -1, -1 ], init_board, -1 );
 
   return reversi0;

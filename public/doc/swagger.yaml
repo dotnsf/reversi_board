@@ -134,7 +134,7 @@ definitions:
   ReversiRequest:
     type: object
     properties:
-      size:
+      board_size:
         type: integer
         description: サイズ(4, 6, or 8)
   UpdateRequest:
@@ -149,7 +149,7 @@ definitions:
           parent_id:
             type: string
             description: 親 ID
-          size:
+          board_size:
             type: integer
             description: サイズ（4, 6, or 8）
           choice_idx:

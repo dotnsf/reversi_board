@@ -1,9 +1,9 @@
 //. reversi.js
 var reversi = class{
   constructor( id, parent_id, depth, choice_idx, choice, board, player ){
-    this.id = ( id || new Date().getTime().toString(16) ) + Math.floor( 1000 * Math.random() ).toString(16);
+    this.id = ( id ? id : ( new Date().getTime().toString(16) ) + Math.floor( 1000 * Math.random() ).toString(16) );
     this.parent_id = parent_id;
-    this.size = board.length;
+    this.board_size = board.length;
     this.depth = depth;
     this.choice_idx = choice_idx;  //. 同じ parent_id の中で、next_choices の何番目の選択肢を選んだ結果だったのか
     this.choice = choice;  //. [ x, y ]
@@ -19,7 +19,7 @@ var reversi = class{
     if( choice[0] > -1 && choice[1] > -1 && this.board[choice[1]][choice[0]] == 0 ){
       var y = choice[0];
       var x = choice[1];
-      console.log( 'player='+player+',x='+x+',y='+y );
+      //console.log( 'player='+player+',x='+x+',y='+y );
       this.board[y][x] = player;
 
       //. ひっくり返す
@@ -54,9 +54,9 @@ var reversi = class{
           }
         }
     
-        if( x < this.size - 1 && board[y-1][x+i] == other ){
+        if( x < this.board_size - 1 && board[y-1][x+i] == other ){
           var c = 2;
-          while( c > 1 && ( x + c ) < this.size && ( y - c ) >= 0 ){
+          while( c > 1 && ( x + c ) < this.board_size && ( y - c ) >= 0 ){
             if( board[y-c][x+c] == player ){
               for( var i = 1; i < c; i ++ ){
                 this.board[y-i][x+i] = player;
@@ -83,9 +83,9 @@ var reversi = class{
         }
       }
 
-      if( x < this.size - 1 && board[y][x+1] == other ){
+      if( x < this.board_size - 1 && board[y][x+1] == other ){
         var c = 2;
-        while( c > 1 && ( x + c ) < this.size ){
+        while( c > 1 && ( x + c ) < this.board_size ){
           if( board[y][x+c] == player ){
             for( var i = 1; i < c; i ++ ){
               this.board[y][x+i] = player;
@@ -97,10 +97,10 @@ var reversi = class{
         }
       }
 
-      if( y < this.size - 1 ){
+      if( y < this.board_size - 1 ){
         if( x > 0 && board[y+1][x-1] == other ){
           var c = 2;
-          while( c > 1 && ( x - c ) >= 0 && ( y + c ) < this.size ){
+          while( c > 1 && ( x - c ) >= 0 && ( y + c ) < this.board_size ){
             if( board[y+c][x-c] == player ){
               for( var i = 1; i < c; i ++ ){
                 this.board[y+i][x-i] = player;
@@ -114,7 +114,7 @@ var reversi = class{
 
         if( board[y+1][x] == other ){
           var c = 2;
-          while( c > 1 && ( y + c ) < this.size ){
+          while( c > 1 && ( y + c ) < this.board_size ){
             if( board[y+c][x] == player ){
               for( var i = 1; i < c; i ++ ){
                 this.board[y+i][x] = player;
@@ -126,9 +126,9 @@ var reversi = class{
           }
         }
     
-        if( x < this.size - 1 && board[y+1][x+1] == other ){
+        if( x < this.board_size - 1 && board[y+1][x+1] == other ){
           var c = 2;
-          while( c > 1 && ( x + c ) < this.size && ( y + c ) < this.size ){
+          while( c > 1 && ( x + c ) < this.board_size && ( y + c ) < this.board_size ){
             if( board[y+c][x+c] == player ){
               for( var i = 1; i < c; i ++ ){
                 this.board[y+i][x+i] = player;
@@ -143,8 +143,8 @@ var reversi = class{
     }
 
     //. count
-    for( var i = 0; i < this.size; i ++ ){
-      for( var j = 0; j < this.size; j ++ ){
+    for( var i = 0; i < this.board_size; i ++ ){
+      for( var j = 0; j < this.board_size; j ++ ){
         if( this.board[i][j] == 1 ){
             this.player0_count ++;
         }else if ( this.board[i][j] == -1 ){
@@ -156,8 +156,8 @@ var reversi = class{
     var other_player = -1 * player;
 
     //. find nexts;
-    for( var i = 0; i < this.size; i ++ ){
-      for( var j = 0; j < this.size; j ++ ){
+    for( var i = 0; i < this.board_size; i ++ ){
+      for( var j = 0; j < this.board_size; j ++ ){
         if( this.board[i][j] == 0 && this.playerChoicable( j, i, other_player )){
           this.next_choices.push( [ j, i ] );
           this.next_status.push( 0 );
@@ -170,8 +170,8 @@ var reversi = class{
 
     if( this.next_choices_num == 0 ){
       //. 次の手で相手はパスしかない
-      for( var i = 0; i < this.size; i ++ ){
-        for( var j = 0; j < this.size; j ++ ){
+      for( var i = 0; i < this.board_size; i ++ ){
+        for( var j = 0; j < this.board_size; j ++ ){
           if( this.board[i][j] == 0 && this.playerChoicable( j, i, player )){
             this.next_choices.push( [ j, i ] );
             this.next_status.push( 0 );
@@ -206,28 +206,28 @@ var reversi = class{
   showBoard( game_end ){
     console.log( '' );
     console.log( 'parent_id = ' + this.parent_id );
-    console.log( 'size = ' + this.size );
+    console.log( 'board_size = ' + this.board_size );
     console.log( 'depth = ' + this.depth );
     console.log( 'choice_idx = ' + this.choice_idx );
     console.log( 'choices_num = ' + this.next_choices_num );
     console.log( 'processed_num = ' + this.next_processed_num );
     console.log( '' );
 
-    for( var i = 0; i < this.size; i ++ ){
+    for( var i = 0; i < this.board_size; i ++ ){
       if( i == 0 ){
         var l = ' ';
-        for( var j = 0; j < this.size; j ++ ){
+        for( var j = 0; j < this.board_size; j ++ ){
           l += ( '  ' + j );
         }
         console.log( l );
         l = ' ';
-        for( var j = 0; j < this.size; j ++ ){
+        for( var j = 0; j < this.board_size; j ++ ){
           l += ' ＿';
         }
         console.log( l );
       }
       var line =  i + '|';
-      for( var j = 0; j < this.size; j ++ ){
+      for( var j = 0; j < this.board_size; j ++ ){
         var c = ( this.board[i][j] == 0 ? '　' :
           ( this.board[i][j] == 1 ? '●' : '○' )
         );
@@ -279,9 +279,9 @@ var reversi = class{
         }
       }
 
-      if( x < this.size - 1 && this.board[x+1][y-1] == o ){
+      if( x < this.board_size - 1 && this.board[x+1][y-1] == o ){
         var c = 2;
-        while( ( x + c ) < this.size - 1 && ( y - c ) >= 0 ){
+        while( ( x + c ) < this.board_size - 1 && ( y - c ) >= 0 ){
           if( this.board[x+c][y-c] == p ){
             b = true;
           }
@@ -300,9 +300,9 @@ var reversi = class{
       }
     }
 
-    if( x < this.size - 1 && this.board[x+1][y] == o ){
+    if( x < this.board_size - 1 && this.board[x+1][y] == o ){
       var c = 2;
-      while( ( x + c ) < this.size ){
+      while( ( x + c ) < this.board_size ){
         if( this.board[x+c][y] == p ){
           b = true;
         }
@@ -310,10 +310,10 @@ var reversi = class{
       }
     }
 
-    if( y < this.size - 1 ){
+    if( y < this.board_size - 1 ){
       if( x > 0 && this.board[x-1][y+1] == o ){
         var c = 2;
-        while( ( x - c ) >= 0 && ( y + c ) < this.size ){
+        while( ( x - c ) >= 0 && ( y + c ) < this.board_size ){
           if( this.board[x-c][y+c] == p ){
             b = true;
           }
@@ -323,7 +323,7 @@ var reversi = class{
 
       if( this.board[x][y+1] == o ){
         var c = 2;
-        while( ( y + c ) < this.size ){
+        while( ( y + c ) < this.board_size ){
           if( this.board[x][y+c] == p ){
             b = true;
           }
@@ -331,9 +331,9 @@ var reversi = class{
         }
       }
     
-      if( x < this.size - 1 && this.board[x+1][y+1] == o ){
+      if( x < this.board_size - 1 && this.board[x+1][y+1] == o ){
         var c = 2;
-        while( ( x + c ) < this.size && ( y + c ) < this.size ){
+        while( ( x + c ) < this.board_size && ( y + c ) < this.board_size ){
           if( this.board[x+c][y+c] == p ){
             b = true;
           }
