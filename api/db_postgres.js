@@ -238,7 +238,7 @@ api.startProcess = async function( board_size ){
         if( conn ){
           try{
             //. 指定サイズのデータが存在していないことを確認してから作成する
-            var sql = "select * from reversi where board_size = " + board_size;
+            var sql = "select * from reversi where board_size = " + board_size + " order by depth, choice_idx";
             var query = { text: sql, values: [] };
             conn.query( query, ( err, result ) => {
               if( err ){
@@ -385,16 +385,26 @@ api.updateProcess = async function( reversi1 ){
               var id = reversi1.parent_id;
               var choice_idx = reversi1.choice_idx;
               if( id ){
-                var r0 = await this.readReversi( id );
-                var reversi0 = new Reversi( r0.id, r0.parent_id, r0.depth, r0.choice_idx, [ -1, -1 ], r0.board, r0.next_player );
-                reversi0.changeStatus( choice_idx, 1 );
-                this.updateReversi( reversi0.id, reversi0.next_status, reversi0.next_processed_num ).then( function( result ){
-                  if( result && result.status ){
-                    resolve( { status: true, result: reversi1 } );
-                  }else{
-                    resolve( { status: false, error: 'update reversi0 failed.' } );
-                  }
-                });
+                var r = await this.readReversi( id );
+                if( r && r.status ){
+                  var r0 = r.result;
+                  console.log( 'updateProcess : r0', r0 );
+                  r0.board = JSON.parse( r0.board );
+                  var reversi0 = new Reversi( r0.id, r0.parent_id, r0.depth, r0.choice_idx, [ -1, -1 ], r0.board, r0.next_player );
+                  reversi0.next_status = JSON.parse( r0.next_status );  //. この時点で r0.next_status = '[0,-1,0,0]' になっている
+                  console.log( 'updateProcess : reversi0(1)', reversi0 ); //. この時点で next_status が [0, 0, 0, 0] になっていておかしい？？
+                  reversi0.changeStatus( choice_idx, 1 );
+                  console.log( 'updateProcess : reversi0(2)', reversi0 );
+                  this.updateReversi( reversi0.id, reversi0.next_status, reversi0.next_processed_num ).then( function( result ){
+                    if( result && result.status ){
+                      resolve( { status: true, result: reversi1 } );
+                    }else{
+                      resolve( { status: false, error: 'update reversi0 failed.' } );
+                    }
+                  });
+                }else{
+                  resolve( { status: false, error: r.error } );
+                }
               }else{
                 resolve( { status: false, error: 'no parent.' } );
               }
@@ -594,6 +604,21 @@ api.post( '/reversi/update_process', async function( req, res ){
   res.contentType( 'application/json; charset=utf-8' );
 
   var reversi = req.body.reversi;
+  reversi.board_size = parseInt( reversi.board_size );
+  reversi.depth = parseInt( reversi.depth );
+  reversi.choice_idx = parseInt( reversi.choice_idx );
+  reversi.choice[0] = parseInt( reversi.choice[0] );
+  reversi.choice[1] = parseInt( reversi.choice[1] );
+  reversi.board = JSON.parse( JSON.stringify( reversi.board ).split( '"' ).join( '' ) );
+  reversi.next_choices = JSON.parse( JSON.stringify( reversi.next_choices ).split( '"' ).join( '' ) );
+  reversi.next_status = JSON.parse( JSON.stringify( reversi.next_status ).split( '"' ).join( '' ) );
+  reversi.next_choices_num = parseInt( reversi.next_choices_num );
+  reversi.next_processed_num = parseInt( reversi.next_processed_num );
+  reversi.player0_count = parseInt( reversi.player0_count );
+  reversi.player1_count = parseInt( reversi.player1_count );
+  reversi.next_player = parseInt( reversi.next_player );
+
+  console.log( 'update_process : reversi', reversi );
   api.updateProcess( reversi ).then( function( result ){
     res.status( result.status ? 200 : 400 );
     res.write( JSON.stringify( result, null, 2 ) );

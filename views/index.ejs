@@ -60,21 +60,14 @@ function nextProcess(){
         if( r0.next_status && r0.next_status.length ){
           var idx = -1;
           for( var i = 0; i < r0.next_status.length && idx == -1; i ++ ){
-            if( r0.next_status[i] != -1 ){
+            if( r0.next_status[i] == -1 ){
               idx = i;
             }
           }
 
           if( idx > -1 ){
             var choice = r0.next_choices[idx];
-            //var choice_x = choice[1];
-            //var choice_y = choice[0];
-
-            console.log( 'r0.next_choices', r0.next_choices );
-            console.log( 'r0.board', r0.board );
-            var reversi1 = new reversi( null, r0.id, r0.depth + 1, idx, choice, r0.board, -1 * r0.next_player );
-            //r0.changeStatus( idx, 1 );
-
+            var reversi1 = new reversi( null, r0.id, r0.depth + 1, idx, choice, r0.board, r0.next_player );
             //. この状態の reversi1 と r0 を DB に保存する（ reversi1 を upateProcess で作成すると r0 も更新される）
             $.ajax({
               url: '/api/reversi/update_process',
@@ -83,7 +76,7 @@ function nextProcess(){
               success: function( result ){
                 obj.remove();
                 console.log( result );
-                alert( 'done' );
+                alert( 'Thanks. Done.' );
                 location.href = '/';
               },
               error: function( e0, e1, e2 ){
