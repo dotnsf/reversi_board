@@ -37,7 +37,7 @@ $(function(){
     data: { board_size: <%= board_size %> },
     success: function( result ){
       main_reversi = result.result;
-      console.log( main_reversi );
+      //console.log( main_reversi );
       $('#main_reversi').html( JSON.stringify( main_reversi, null, 2 ) );
     },
     error: function( e0, e1, e2 ){

@@ -210,6 +210,10 @@ api.readReversis = async function( limit, offset ){
               console.log( err );
               resolve( { status: false, error: err } );
             }else{
+              for( var i = 0; i < result.rows.length; i ++ ){
+                result.rows[i].created = parseInt( result.rows[i].created );
+                result.rows[i].updated = parseInt( result.rows[i].updated );
+              }
               resolve( { status: true, results: result.rows } );
             }
           });
@@ -255,12 +259,44 @@ api.startProcess = async function( board_size ){
                     }
                   });
                 }else{
-                  var reversi1 = result.rows[0];   //. board や next_choices, next_status などが文字列のまま
-                  reversi1.board = JSON.parse( reversi1.board );
-                  reversi1.next_choices = JSON.parse( reversi1.next_choices );
-                  reversi1.next_status = JSON.parse( reversi1.next_status );
-                  reversi1.next_choices_num = reversi1.next_choices.length;
-                  resolve( { status: true, result: reversi1 } );
+                  sql = "select * from reversi where board_size = $1 and next_choices_num > 0 and next_choices_num > next_processed_num order by depth, choice_idx";
+                  query = { text: sql, values: [ board_size ] };
+                  conn.query( query, ( err, result ) => {
+                    if( err ){
+                      console.log( err );
+                      resolve( { status: false, error: err } );
+                    }else{
+                      if( result.rows.length == 0 ){
+                        sql = "select * from reversi where board_size = $1 and next_choices_num > 0 and next_processed_num = 0 order by depth, choice_idx";
+                        query = { text: sql, values: [ board_size ] };
+                        conn.query( query, ( err, result ) => {
+                          if( err ){
+                            console.log( err );
+                            resolve( { status: false, error: err } );
+                          }else{
+                            if( result.rows.length == 0 ){
+                              //. 解析終了？
+                              resolve( { status: true, result: null } );
+                            }else{
+                              var reversi1 = result.rows[0];   //. board や next_choices, next_status などが文字列のまま
+                              reversi1.board = JSON.parse( reversi1.board );
+                              reversi1.next_choices = JSON.parse( reversi1.next_choices );
+                              reversi1.next_status = JSON.parse( reversi1.next_status );
+                              reversi1.next_choices_num = reversi1.next_choices.length;
+                              resolve( { status: true, result: reversi1 } );
+                            }
+                          }
+                        });
+                      }else{
+                        var reversi1 = result.rows[0];   //. board や next_choices, next_status などが文字列のまま
+                        reversi1.board = JSON.parse( reversi1.board );
+                        reversi1.next_choices = JSON.parse( reversi1.next_choices );
+                        reversi1.next_status = JSON.parse( reversi1.next_status );
+                        reversi1.next_choices_num = reversi1.next_choices.length;
+                        resolve( { status: true, result: reversi1 } );
+                      }
+                    }
+                  });
                 }
               }
             });
@@ -322,6 +358,8 @@ api.nextProcess = async function( board_size ){
                     }else{
                       var r0 = result.rows[0];   
                       var reversi0 = new Reversi( r0.id, r0.parent_id, r0.depth, r0.choice_idx, [ -1, -1 ], JSON.parse( r0.board ), r0.next_player );
+                      reversi0.next_status = JSON.parse( r0.next_status );
+                      reversi0.next_processed_num = r0.next_processed_num;
                       reversi0.changeStatus( 0, -1 );
                       this.updateReversi( reversi0.id, reversi0.next_status, reversi0.next_processed_num ).then( function( result ){
                         if( result && result.status ){
@@ -342,10 +380,11 @@ api.nextProcess = async function( board_size ){
                 });
               }else{
                 var r0 = result.rows[0];   
-                var reversi0 = new Reversi( r0.id, r0.parent_id, r0.depth, r0.choice_idx, [ -1, -1 ]/*r0.next_choices[r0.next_processed_num]*/, JSON.parse( r0.board ), r0.next_player );
+                var reversi0 = new Reversi( r0.id, r0.parent_id, r0.depth, r0.choice_idx, [ -1, -1 ], JSON.parse( r0.board ), r0.next_player );
+                reversi0.next_status = JSON.parse( r0.next_status );
+                reversi0.next_processed_num = r0.next_processed_num;
                 reversi0.changeStatus( r0.next_processed_num, -1 );
-                //this.updateReversi( reversi0.id, reversi0.next_status, reversi0.next_processed_num ).then( function( result ){
-                api.updateReversi( reversi0.id, reversi0.next_status, reversi0.next_processed_num ).then( function( result ){
+                this.updateReversi( reversi0.id, reversi0.next_status, reversi0.next_processed_num ).then( function( result ){
                   if( result && result.status ){
                     //. next_processed_num 番目の選択はクライアント側で処理してもらうので、この状態の reversi0 を返す
                     resolve( { status: true, result: reversi0 } );
@@ -388,13 +427,11 @@ api.updateProcess = async function( reversi1 ){
                 var r = await this.readReversi( id );
                 if( r && r.status ){
                   var r0 = r.result;
-                  console.log( 'updateProcess : r0', r0 );
                   r0.board = JSON.parse( r0.board );
                   var reversi0 = new Reversi( r0.id, r0.parent_id, r0.depth, r0.choice_idx, [ -1, -1 ], r0.board, r0.next_player );
-                  reversi0.next_status = JSON.parse( r0.next_status );  //. この時点で r0.next_status = '[0,-1,0,0]' になっている
-                  console.log( 'updateProcess : reversi0(1)', reversi0 ); //. この時点で next_status が [0, 0, 0, 0] になっていておかしい？？
+                  reversi0.next_status = JSON.parse( r0.next_status );
+                  reversi0.next_processed_num = r0.next_processed_num;
                   reversi0.changeStatus( choice_idx, 1 );
-                  console.log( 'updateProcess : reversi0(2)', reversi0 );
                   this.updateReversi( reversi0.id, reversi0.next_status, reversi0.next_processed_num ).then( function( result ){
                     if( result && result.status ){
                       resolve( { status: true, result: reversi1 } );
@@ -618,7 +655,6 @@ api.post( '/reversi/update_process', async function( req, res ){
   reversi.player1_count = parseInt( reversi.player1_count );
   reversi.next_player = parseInt( reversi.next_player );
 
-  console.log( 'update_process : reversi', reversi );
   api.updateProcess( reversi ).then( function( result ){
     res.status( result.status ? 200 : 400 );
     res.write( JSON.stringify( result, null, 2 ) );

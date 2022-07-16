@@ -1,7 +1,6 @@
 //. reversi.js
 var reversi = class{
   constructor( id, parent_id, depth, choice_idx, choice, board, player ){
-    console.log( 'board', board );  //. undefined ??
     this.id = ( id ? id : ( new Date().getTime().toString(16) ) + Math.floor( 1000 * Math.random() ).toString(16) );
     this.parent_id = parent_id;
     this.board_size = board.length;  //. "Cannot read property 'length' of undefined"
@@ -157,8 +156,6 @@ var reversi = class{
       }
     }
 
-    var other_player = -1 * player;
-
     //. find nexts;
     for( var i = 0; i < this.board_size; i ++ ){
       for( var j = 0; j < this.board_size; j ++ ){
@@ -175,6 +172,8 @@ var reversi = class{
     if( this.next_choices_num == 0 ){
       //. 次の手で相手はパスしかない
       this.next_player *= -1;
+      this.next_choices = [];
+      this.next_status = [];
       for( var i = 0; i < this.board_size; i ++ ){
         for( var j = 0; j < this.board_size; j ++ ){
           if( this.board[i][j] == 0 && this.playerChoicable( j, i, this.next_player )){
