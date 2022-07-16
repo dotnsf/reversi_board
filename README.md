@@ -6,9 +6,35 @@
 「リバーシ」の全件探索を分散コンピューティングで実現することを目的としたパッケージ
 
 
+## Usage
+
+### Server
+
+- CLI: 
+
+  - `$ node app`
+
+- Environment values
+
+  - `DATABASE_URL` : URL of PostgreSQL
+
+  - `BOARD_SIZE` : Size of game board. (Default:4)
+
+
+### Client bot
+
+- CLI: 
+
+  - `$ node bot`
+
+- Environment values
+
+  - `BOARD_SIZE` : Size of game board. (Default:4)
+
+
+
 ## 現時点での問題点
 
-- [ ] 最後まで解析を自動で続けるツールが必要
 
 
 ## Licensing
