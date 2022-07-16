@@ -36,9 +36,16 @@ $(function(){
     type: 'POST',
     data: { board_size: <%= board_size %> },
     success: function( result ){
-      main_reversi = result.result;
-      //console.log( main_reversi );
-      $('#main_reversi').html( JSON.stringify( main_reversi, null, 2 ) );
+      if( result.status ){
+        if( result.result ){
+          main_reversi = result.result;
+          //console.log( main_reversi );
+          $('#main_reversi').html( JSON.stringify( main_reversi, null, 2 ) );
+        }else{
+          $('#main_reversi').html( '解析終了' );
+          $('#next_btn').css( 'display', 'none' );
+        }
+      }
     },
     error: function( e0, e1, e2 ){
       console.log( e0, e1, e2 );
