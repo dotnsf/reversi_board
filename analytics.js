@@ -35,7 +35,7 @@ async function getAllRecords( board_size ){
       conn = await pg.connect();
       if( conn ){
         try{
-          var sql = "select id, parent_id, depth, choice_idx, player0_count, player1_count from reversi where board_size = $1 order by depth desc, parent_id, choice_idx";
+          var sql = "select id, parent_id, depth, choice_idx, player0_count, player1_count, next_player from reversi where board_size = $1 order by depth desc, parent_id, choice_idx";
           var query = { text: sql, values: [ board_size ] };
           conn.query( query, function( err, result ){
             if( err ){
@@ -115,6 +115,7 @@ getAllRecords( BOARD_SIZE ).then( async function( results ){
       while( b ){
         var bb = -1;
         var player0_counts = {};
+        var next_players = {};
         for( var i = 0; i < results.length && bb < 1; i ++ ){
           if( results[i].depth == max_depth ){
             bb = 0;
@@ -129,12 +130,13 @@ getAllRecords( BOARD_SIZE ).then( async function( results ){
               player0_counts[results[i].parent_id] = [];
             }
             player0_counts[results[i].parent_id].push( results[i].player0_count - results[i].player1_count );
+            next_players[results[i].parent_id] = results[i].next_player;
           }
         }
 
         var player0_values = {};
         Object.keys( player0_counts ).forEach( function( parent_id ){
-          if( max_depth % 2 == 0 ){
+          if( next_players[parent_id] == -1 ){
             player0_values[parent_id] =  player0_counts[parent_id].reduce( aryMin );
           }else{
             player0_values[parent_id] =  player0_counts[parent_id].reduce( aryMax );
