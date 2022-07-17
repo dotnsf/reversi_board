@@ -18,6 +18,8 @@
 
   - `DATABASE_URL` : URL of PostgreSQL
 
+  - `CORS` : URL which is allowed to access to REST API via CORS. (Default:'');
+
   - `BOARD_SIZE` : Size of game board. (Default:4)
 
 

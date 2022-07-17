@@ -11,11 +11,23 @@ try{
 }catch( e ){
 }
 
-var BASE_URL = 'http://localhost:8080/api/reversi';
+var BASE_URL = 'http://localhost:8080';
+var _BASE_URL = 'BASE_URL' in process.env ? process.env.BASE_URL : ''; 
+try{
+  if( _BASE_URL ){
+    while( _BASE_URL.endsWith( '/' ) ){
+      _BASE_URL = _BASE_URL.substring( 0, _BASE_URL.length );
+    }
+    if( _BASE_URL ){
+      BASE_URL = _BASE_URL;
+    }
+  }
+}catch( e ){
+}
 
 async function startProcess(){
   return new Promise( async ( resolve, reject ) => {
-    var url = BASE_URL + '/start_process';
+    var url = BASE_URL + '/api/reversi/start_process';
     var options = { 
       url: url, 
       method: 'POST',
@@ -39,7 +51,7 @@ async function startProcess(){
 
 async function nextProcess(){
   return new Promise( async ( resolve, reject ) => {
-    var url0 = BASE_URL + '/next_process';
+    var url0 = BASE_URL + '/api/reversi/next_process';
     var options0 = { 
       url: url0, 
       method: 'POST',
@@ -64,7 +76,7 @@ async function nextProcess(){
               var choice = r0.next_choices[idx];
               var reversi1 = new reversi( null, r0.id, r0.depth + 1, idx, choice, r0.board, r0.next_player );
 
-              var url1 = BASE_URL + '/update_process';
+              var url1 = BASE_URL + '/api/reversi/update_process';
               var options1 = { 
                 url: url1, 
                 method: 'POST',
