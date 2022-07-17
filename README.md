@@ -33,6 +33,17 @@
 
   - `BOARD_SIZE` : Size of game board. (Default:4)
 
+### Analytics client
+
+- CLI: 
+
+  - `$ node analytics`
+
+- Environment values
+
+  - `DATABASE_URL` : URL of PostgreSQL
+
+  - `BOARD_SIZE` : Size of game board. (Default:4)
 
 
 ## 現時点での問題点
