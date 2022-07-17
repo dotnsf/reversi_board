@@ -53,8 +53,15 @@ $(function(){
   });
 });
 
+var obj = null;
 function nextProcess(){
-  var obj = getBusyOverlay( 'viewport', {color:'black', opacity:0.5, text:'処理中・・', style:'text-decoration:blink; font-weight:bold; font-size:12px; color:white;' } );
+  if( confirm( '分散システムでの処理に参加します。ブラウザが稼働している間は処理を継続します。終了するにはブラウザのタブを閉じてください。' ) ){
+    obj = getBusyOverlay( 'viewport', {color:'black', opacity:0.5, text:'処理中・・', style:'text-decoration:blink; font-weight:bold; font-size:12px; color:white;' } );
+    nextProcessLoop();
+  }
+}
+
+function nextProcessLoop(){
   $.ajax({
     url: '/api/reversi/next_process',
     type: 'POST',
@@ -81,10 +88,11 @@ function nextProcess(){
               type: 'POST',
               data: { reversi: reversi1 },
               success: function( result ){
-                obj.remove();
+                //obj.remove();
                 console.log( result );
-                alert( 'Thanks. Done.' );
-                location.href = '/';
+                //alert( 'Thanks. Done.' );
+                //location.href = '/';
+                nextProcessLoop();
               },
               error: function( e0, e1, e2 ){
                 obj.remove();

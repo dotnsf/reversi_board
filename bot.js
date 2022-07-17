@@ -118,4 +118,5 @@ startProcess().then( async function( result ){
       }
     }
   }
+  process.exit( 0 );
 });

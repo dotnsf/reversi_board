@@ -1,4 +1,5 @@
 //. analytics.js
+
 process.env.PGSSLMODE = 'no-verify';
 var PG = require( 'pg' );
 PG.defaults.ssl = true;
@@ -34,7 +35,7 @@ async function getAllRecords( board_size ){
       conn = await pg.connect();
       if( conn ){
         try{
-          var sql = "select id, parent_id, depth, choice_idx, player0_count from reversi where board_size = $1 order by depth desc, parent_id, choice_idx";
+          var sql = "select id, parent_id, depth, choice_idx, player0_count, player1_count from reversi where board_size = $1 order by depth desc, parent_id, choice_idx";
           var query = { text: sql, values: [ board_size ] };
           conn.query( query, function( err, result ){
             if( err ){
@@ -68,6 +69,42 @@ async function getAllRecords( board_size ){
   });
 }
 
+async function updateValue( id, value ){
+  return new Promise( async ( resolve, reject ) => {
+    if( pg ){
+      conn = await pg.connect();
+      if( conn ){
+        try{
+          var sql = 'update reversi set value = $1, updated = $2 where id = $3';
+          var t = ( new Date() ).getTime();
+          var query = { text: sql, values: [ value, t, id ] };
+          conn.query( query, function( err, result ){
+            if( err ){
+              console.log( err );
+              resolve( { status: false, error: err } );
+            }else{
+              resolve( { status: true, result: result } );
+            }
+          });
+        }catch( e ){
+          console.log( e );
+          resolve( { status: false, error: err } );
+        }finally{
+          if( conn ){
+            conn.release();
+          }
+        }
+      }else{
+        resolve( { status: false, error: 'no connection.' } );
+      }
+    }else{
+      resolve( { status: false, error: 'db not ready.' } );
+    }
+  });
+};
+
+const aryMax = function( a, b ){ return Math.max( a, b ); }
+const aryMin = function( a, b ){ return Math.min( a, b ); }
 
 getAllRecords( BOARD_SIZE ).then( async function( results ){
   if( results && results.length > 0 ){
@@ -85,24 +122,26 @@ getAllRecords( BOARD_SIZE ).then( async function( results ){
             bb = 1;
           }
 
+          //. 対象の depth データか？
           if( bb == 0 ){
+            //. parent_id ごとに ( player0_count - player1_count ) の値を配列にまとめておく
             if( !player0_counts[results[i].parent_id] ){
               player0_counts[results[i].parent_id] = [];
             }
-            player0_counts[results[i].parent_id].push( results[i].player0_count );
+            player0_counts[results[i].parent_id].push( results[i].player0_count - results[i].player1_count );
           }
         }
 
         var player0_values = {};
-        player0_counts.keys().forEach( function( parent_id ){
+        Object.keys( player0_counts ).forEach( function( parent_id ){
           if( max_depth % 2 == 0 ){
-            player0_values[parent_id] = Math.min( player0_counts[parent_id] );
+            player0_values[parent_id] =  player0_counts[parent_id].reduce( aryMin );
           }else{
-            player0_values[parent_id] = Math.max( player0_counts[parent_id] );
+            player0_values[parent_id] =  player0_counts[parent_id].reduce( aryMax );
           }
         });
 
-        player0_values.keys().forEach( function( id ){
+        Object.keys( player0_values ).forEach( function( id ){
           var bbb = true;
           for( var i = 0; i < results.length && bbb; i ++ ){
             if( results[i].id === id ){  //. null と null を比較する可能性がある
