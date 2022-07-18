@@ -68,15 +68,22 @@ api.createReversi = async function( reversi ){
       conn = await pg.connect();
       if( conn ){
         try{
-          var sql = 'insert into reversi( id, parent_id, board_size, depth, choice_idx, choice_x, choice_y, board, next_choices, next_status, next_choices_num, next_processed_num, player0_count, player1_count, next_player, created, updated ) values ( $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17 )';
+          var sql = 'insert into reversi( id, parent_id, board_size, depth, choice_idx, choice_x, choice_y, board, next_choices, next_status, next_choices_num, next_processed_num, player0_count, player1_count, next_player, value, value_status, created, updated ) values ( $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19 )';
           if( !reversi.id ){
             reversi.id = uuidv4();
           }
           var t = ( new Date() ).getTime();
           reversi.created = t;
           reversi.updated = t;
+          if( reversi.next_choices_num == 0 ){
+            reversi.value = reversi.player0_count - reversi.player1_count;
+            reversi.value_status = 1;
+          }else{
+            reversi.value = null;
+            reversi.value_status = 0;
+          }
           //console.log( reversi );
-          var query = { text: sql, values: [ reversi.id, reversi.parent_id, reversi.board_size, reversi.depth, reversi.choice_idx, reversi.choice[0], reversi.choice[1], JSON.stringify( reversi.board ), JSON.stringify( reversi.next_choices ), JSON.stringify( reversi.next_status ), reversi.next_choices_num, reversi.next_processed_num, reversi.player0_count, reversi.player1_count, reversi.next_player, reversi.created, reversi.updated ] };
+          var query = { text: sql, values: [ reversi.id, reversi.parent_id, reversi.board_size, reversi.depth, reversi.choice_idx, reversi.choice[0], reversi.choice[1], JSON.stringify( reversi.board ), JSON.stringify( reversi.next_choices ), JSON.stringify( reversi.next_status ), reversi.next_choices_num, reversi.next_processed_num, reversi.player0_count, reversi.player1_count, reversi.next_player, reversi.value, reversi.value_status, reversi.created, reversi.updated ] };
           conn.query( query, function( err, result ){
             if( err ){
               console.log( err );

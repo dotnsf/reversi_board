@@ -29,14 +29,20 @@ try{
 }catch( e ){
 }
 
-async function getAllRecords( board_size ){
+async function getAllRecords( board_size, depth ){
   return new Promise( async ( resolve, reject ) => {
     if( pg ){
       conn = await pg.connect();
       if( conn ){
         try{
-          var sql = "select id, parent_id, depth, choice_idx, player0_count, player1_count, next_player from reversi where board_size = $1 order by depth desc, parent_id, choice_idx";
-          var query = { text: sql, values: [ board_size ] };
+          var sql = "select id, parent_id, depth, choice_idx, player0_count, player1_count, value, value_status, next_player from reversi where board_size = $1";
+          var values = [ board_size ];
+          if( depth > -1 ){
+            sql += " and depth = $2";
+            values.push( depth );
+          }
+          sql += " order by depth desc, parent_id, choice_idx";
+          var query = { text: sql, values: values };
           conn.query( query, function( err, result ){
             if( err ){
               console.log( err );
@@ -69,13 +75,83 @@ async function getAllRecords( board_size ){
   });
 }
 
+async function getTargetRecords( board_size ){
+  return new Promise( async ( resolve, reject ) => {
+    if( pg ){
+      conn = await pg.connect();
+      if( conn ){
+        try{
+          var sql = "select id, parent_id, depth, choice_idx, player0_count, player1_count, value, value_status, next_player from reversi where board_size = $1 and depth = ( select max(depth) from reversi where value_status = 0 ) limit 1 order by parent_id, choice_idx";
+          var query = { text: sql, values: [ board_size ] };
+          conn.query( query, function( err, result0 ){
+            if( err ){
+              console.log( err );
+              resolve( { status: false, error: err } );
+            }else{
+              sql = "update reversi set value_status = -1, updated = $1 where id = $2";
+              var t = ( new Date() ).getTime();
+              query = { text: sql, values: [ t, result0.rows[0].id ] };
+              /*
+              console.log( result.rows[0] );  //. depth, choice_idx, player0_count が整数になっていることを確認する
+              console.log( result.rows[result.rows.length-1] );  //. parent_id が null になっていることを確認する
+              console.log( result.rows[result.rows.length-2] );  //. parent_id が↑の id になっていることを確認する
+              console.log( '#' + result.rows.length + ', max(depth)=' + result.rows[0].depth );
+              */
+
+              conn.query( query, function( err, result ){
+                if( err ){
+                  console.log( err );
+                  resolve( { status: false, error: err } );
+                }else{
+                  sql = "select id, parent_id, depth, choice_idx, player0_count, player1_count, value, value_status, next_player from reversi where parent_id = $1 order by choice_idx";
+                  query = { text: sql, values: [ result0.rows[0].id ] };
+                  conn.query( query, function( err, result1 ){
+                    if( err ){
+                      console.log( err );
+
+                      sql = "update reversi set value_status = 0, updated = $1 where id = $2";
+                      t = ( new Date() ).getTime();
+                      query = { text: sql, values: [ t, result0.rows[0].id ] };
+                      conn.query( query, function( err0, result1 ){
+                        if( err0 ){
+                          console.log( err0 );
+                          resolve( { status: false, error: err0 } );
+                        }else{
+                          resolve( { status: false, error: err } );
+                        }
+                      });
+                    }else{
+                      resolve( { status: true, parent: result0.rows[0], children: result1.rows } );
+                    }
+                  });
+                }
+              });
+            }
+          });
+        }catch( e ){
+          console.log( e );
+          resolve( { status: false, error: err } );
+        }finally{
+          if( conn ){
+            conn.release();
+          }
+        }
+      }else{
+        resolve( { status: false, error: 'no connection.' } );
+      }
+    }else{
+      resolve( { status: false, error: 'db not ready.' } );
+    }
+  });
+}
+
 async function updateValue( id, value ){
   return new Promise( async ( resolve, reject ) => {
     if( pg ){
       conn = await pg.connect();
       if( conn ){
         try{
-          var sql = 'update reversi set value = $1, updated = $2 where id = $3';
+          var sql = 'update reversi set value = $1, value_status = 1, updated = $2 where id = $3';
           var t = ( new Date() ).getTime();
           var query = { text: sql, values: [ value, t, id ] };
           conn.query( query, function( err, result ){
@@ -101,74 +177,51 @@ async function updateValue( id, value ){
       resolve( { status: false, error: 'db not ready.' } );
     }
   });
-};
+}
 
 const aryMax = function( a, b ){ return Math.max( a, b ); }
 const aryMin = function( a, b ){ return Math.min( a, b ); }
 
-getAllRecords( BOARD_SIZE ).then( async function( results ){
-  if( results && results.length > 0 ){
-    var player0_value = null;
-    var max_depth = results[0].depth;
-    if( max_depth % 2 == 0 ){
-      var b = true;
-      while( b ){
-        var bb = -1;
-        var player0_counts = {};
-        var next_players = {};
-        for( var i = 0; i < results.length && bb < 1; i ++ ){
-          if( results[i].depth == max_depth ){
-            bb = 0;
-          }else if( results[i].depth < max_depth ){
-            bb = 1;
-          }
-
-          //. 対象の depth データか？
-          if( bb == 0 ){
-            //. parent_id ごとに ( player0_count - player1_count ) の値を配列にまとめておく
-            if( !player0_counts[results[i].parent_id] ){
-              player0_counts[results[i].parent_id] = [];
-            }
-            player0_counts[results[i].parent_id].push( results[i].player0_count - results[i].player1_count );
-            next_players[results[i].parent_id] = results[i].next_player;
-          }
-        }
-
-        var player0_values = {};
-        Object.keys( player0_counts ).forEach( function( parent_id ){
-          if( next_players[parent_id] == -1 ){
-            player0_values[parent_id] =  player0_counts[parent_id].reduce( aryMin );
-          }else{
-            player0_values[parent_id] =  player0_counts[parent_id].reduce( aryMax );
-          }
-        });
-
-        Object.keys( player0_values ).forEach( function( id ){
-          var bbb = true;
-          for( var i = 0; i < results.length && bbb; i ++ ){
-            if( results[i].id === id ){  //. null と null を比較する可能性がある
-              results[i].player0_count = player0_values[id];
-              if( results[i].depth == 0 ){
-                player0_value = results[i].player0_count;
-              }
-              bbb = false;
-            }
-          }
-        });
-
-        console.log( 'Finished for depth = ' + max_depth );
-        max_depth --;
-        if( max_depth < 0 ){
-          b = false;
-        }
+async function processOneRecord( board_size ){
+  return new Promise( async ( resolve, reject ) => {
+    var r = await getTargetRecords( board_size );
+    if( r && r.status ){
+      var parent = r.parent;
+      var children = r.children;
+      var values = [];
+      for( var i = 0; i < children.length; i ++ ){
+        values.push( children[i].value );
       }
-    }
 
-    console.log( '-> player0_value = ' + player0_value );
-    if( BOARD_SIZE * BOARD_SIZE / 2 > player0_value ){
-      console.log( 'player1(後手) would win for this game.' );
-    }else if( BOARD_SIZE * BOARD_SIZE / 2 < player0_value ){
+      if( parent.next_player == -1 ){
+        parent.value = values.reduce( aryMin );
+      }else{
+        parent.value = values.reduce( aryMax );
+      }
+
+      r = await updateValue( parent.id, parent.value );
+      r.reversi = parent;
+      r.finished = ( parent.depth == 0 );
+
+      resolve( r );
+    }else{
+      resolve( { status: false, error: r.error } );
+    }
+  });
+}
+
+setTimeout( async function(){
+  var r = await processOneRecord( BOARD_SIZE );
+  while( r.status && !r.fisnished ){
+    r = await processOneRecord( BOARD_SIZE );
+  }
+
+  if( r.status ){
+    console.log( JSON.stringify( r.reversi, null, 2 ) );
+    if( r.reversi.value > 0 ){
       console.log( 'player0(先手) would win for this game.' );
+    }else if( r.reversi.value < 0 ){
+      console.log( 'player1(後手) would win for this game.' );
     }else{
       console.log( 'no winning patterns for both player0 nor player1.' );
     }
@@ -176,4 +229,5 @@ getAllRecords( BOARD_SIZE ).then( async function( results ){
     console.log( 'no enough records can be retrieved.' );
   }
   process.exit( 0 );
-});
+}, 1000 );
+
