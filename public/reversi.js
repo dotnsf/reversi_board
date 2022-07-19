@@ -55,7 +55,7 @@ var reversi = class{
           }
         }
     
-        if( x < this.board_size - 1 && board[y-1][x+i] == other ){
+        if( x < this.board_size - 1 && board[y-1][x+1] == other ){
           var c = 2;
           while( c > 1 && ( x + c ) < this.board_size && ( y - c ) >= 0 ){
             if( board[y-c][x+c] == player ){
