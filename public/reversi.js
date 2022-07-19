@@ -6,7 +6,7 @@ var reversi = class{
     this.board_size = board.length;  //. "Cannot read property 'length' of undefined"
     this.depth = depth;
     this.choice_idx = choice_idx;  //. 同じ parent_id の中で、next_choices の何番目の選択肢を選んだ結果だったのか
-    this.choice = choice;  //. [ x, y ]
+    this.choice = choice;  //. [ y, x ]
     this.board = board;  //. [ [ 0, 0, 0, 0, 0, 0, 0, 0 ], .. ]
     this.next_choices = [];  //. [ [ 2, 3 ], .. ]
     this.next_status = [];
@@ -16,8 +16,8 @@ var reversi = class{
     this.player1_count = 0;
     this.next_player = player;
 
-    //. choice = [ x, y ]
-    if( choice[0] > -1 && choice[1] > -1 && this.board[choice[1]][choice[0]] == 0 ){
+    //. choice = [ y, x ]
+    if( choice[0] > -1 && choice[1] > -1 && this.board[choice[0]][choice[1]] == 0 ){
       var y = choice[0];
       var x = choice[1];
       //console.log( 'player='+player+',x='+x+',y='+y );
