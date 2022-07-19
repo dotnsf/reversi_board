@@ -263,30 +263,30 @@ var reversi = class{
     var o = -1 * p;
 
     if( y > 0 ){
-      if( x > 0 && this.board[x-1][y-1] == o ){
+      if( x > 0 && this.board[y-1][x-1] == o ){
         var c = 2;
         while( ( x - c ) >= 0 && ( y - c ) >= 0 ){
-          if( this.board[x-c][y-c] == p ){
+          if( this.board[y-c][x-c] == p ){
             b = true;
           }
           c ++;
         }
       }
 
-      if( this.board[x][y-1] == o ){
+      if( this.board[y-1][x] == o ){
         var c = 2;
         while( ( y - c ) >= 0 ){
-          if( this.board[x][y-c] == p ){
+          if( this.board[y-c][x] == p ){
             b = true;
           }
           c ++;
         }
       }
 
-      if( x < this.board_size - 1 && this.board[x+1][y-1] == o ){
+      if( x < this.board_size - 1 && this.board[y-1][x+1] == o ){
         var c = 2;
         while( ( x + c ) < this.board_size - 1 && ( y - c ) >= 0 ){
-          if( this.board[x+c][y-c] == p ){
+          if( this.board[y-c][x+c] == p ){
             b = true;
           }
           c ++;
@@ -294,20 +294,20 @@ var reversi = class{
       }
     }
 
-    if( x > 0 && this.board[x-1][y] == o ){
+    if( x > 0 && this.board[y][x-1] == o ){
       var c = 2;
       while( ( x - c ) >= 0 ){
-        if( this.board[x-c][y] == p ){
+        if( this.board[y][x-c] == p ){
           b = true;
         }
         c ++;
       }
     }
 
-    if( x < this.board_size - 1 && this.board[x+1][y] == o ){
+    if( x < this.board_size - 1 && this.board[y][x+1] == o ){
       var c = 2;
       while( ( x + c ) < this.board_size ){
-        if( this.board[x+c][y] == p ){
+        if( this.board[y][x+c] == p ){
           b = true;
         }
         c ++;
@@ -315,30 +315,30 @@ var reversi = class{
     }
 
     if( y < this.board_size - 1 ){
-      if( x > 0 && this.board[x-1][y+1] == o ){
+      if( x > 0 && this.board[y+1][x-1] == o ){
         var c = 2;
         while( ( x - c ) >= 0 && ( y + c ) < this.board_size ){
-          if( this.board[x-c][y+c] == p ){
+          if( this.board[y+c][x-c] == p ){
             b = true;
           }
           c ++;
         }
       }
 
-      if( this.board[x][y+1] == o ){
+      if( this.board[y+1][x] == o ){
         var c = 2;
         while( ( y + c ) < this.board_size ){
-          if( this.board[x][y+c] == p ){
+          if( this.board[y+c][x] == p ){
             b = true;
           }
           c ++;
         }
       }
     
-      if( x < this.board_size - 1 && this.board[x+1][y+1] == o ){
+      if( x < this.board_size - 1 && this.board[y+1][x+1] == o ){
         var c = 2;
         while( ( x + c ) < this.board_size && ( y + c ) < this.board_size ){
-          if( this.board[x+c][y+c] == p ){
+          if( this.board[y+c][x+c] == p ){
             b = true;
           }
           c ++;
