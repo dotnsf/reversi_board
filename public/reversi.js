@@ -157,10 +157,11 @@ var reversi = class{
     }
 
     //. find nexts;
-    for( var i = 0; i < this.board_size; i ++ ){
-      for( var j = 0; j < this.board_size; j ++ ){
+    for( var i = 0; i < this.board_size; i ++ ){    //. i = y
+      for( var j = 0; j < this.board_size; j ++ ){  //. j = x
         if( this.board[i][j] == 0 && this.playerChoicable( j, i, this.next_player )){
-          this.next_choices.push( [ j, i ] );
+          //this.next_choices.push( [ j, i ] );
+          this.next_choices.push( [ i, j ] );
           this.next_status.push( 0 );
         }
       }
@@ -177,7 +178,8 @@ var reversi = class{
       for( var i = 0; i < this.board_size; i ++ ){
         for( var j = 0; j < this.board_size; j ++ ){
           if( this.board[i][j] == 0 && this.playerChoicable( j, i, this.next_player )){
-            this.next_choices.push( [ j, i ] );
+            //this.next_choices.push( [ j, i ] );
+            this.next_choices.push( [ i, j ] );
             this.next_status.push( 0 );
           }
         }
