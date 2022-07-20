@@ -320,7 +320,7 @@ var reversi = class{
       if( x < this.board_size - 1 && this.board[y-1][x+1] == o ){
         var c = 2;
         var z = false;
-        while( ( x + c ) < this.board_size - 1 && ( y - c ) >= 0 && !z && !b ){
+        while( ( x + c ) < this.board_size && ( y - c ) >= 0 && !z && !b ){
           if( this.board[y-c][x+c] == 0 ){
             z = true;
           }else if( this.board[y-c][x+c] == p ){
