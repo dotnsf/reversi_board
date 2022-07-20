@@ -115,6 +115,8 @@ startProcess().then( async function( result ){
       if( b ){
         console.log( r.result );
         b = ( r.result );
+      }else{
+        console.log( { r } );
       }
     }
   }
