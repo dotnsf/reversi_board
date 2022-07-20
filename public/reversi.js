@@ -29,8 +29,11 @@ var reversi = class{
       if( y > 0 ){
         if( x > 0 && this.board[y-1][x-1] == other ){
           var c = 2;
-          while( c > 1 && ( x - c ) >= 0 && ( y - c ) >= 0 ){
-            if( this.board[y-c][x-c] == player ){
+          var z = false;
+          while( c > 1 && ( x - c ) >= 0 && ( y - c ) >= 0 && !z ){
+            if( this.board[y-c][x-c] == 0 ){
+              z = true;
+            }else if( this.board[y-c][x-c] == player ){
               for( var i = 1; i < c; i ++ ){
                 this.board[y-i][x-i] = player;
               }
@@ -43,8 +46,11 @@ var reversi = class{
 
         if( board[y-1][x] == other ){
           var c = 2;
-          while( c > 1 && ( y - c ) >= 0 ){
-            if( board[y-c][x] == player ){
+          var z = false;
+          while( c > 1 && ( y - c ) >= 0 && !z ){
+            if( board[y-c][x] == 0 ){
+              z = true;
+            }else if( board[y-c][x] == player ){
               for( var i = 1; i < c; i ++ ){
                 this.board[y-i][x] = player;
               }
@@ -57,8 +63,11 @@ var reversi = class{
     
         if( x < this.board_size - 1 && board[y-1][x+1] == other ){
           var c = 2;
-          while( c > 1 && ( x + c ) < this.board_size && ( y - c ) >= 0 ){
-            if( board[y-c][x+c] == player ){
+          var z = false;
+          while( c > 1 && ( x + c ) < this.board_size && ( y - c ) >= 0 && !z ){
+            if( board[y-c][x+c] == 0 ){
+              z = true;
+            }else if( board[y-c][x+c] == player ){
               for( var i = 1; i < c; i ++ ){
                 this.board[y-i][x+i] = player;
               }
@@ -72,8 +81,15 @@ var reversi = class{
 
       if( x > 0 && board[y][x-1] == other ){
         var c = 2;
-        while( c > 1 && ( x - c ) >= 0 ){
-          if( board[y][x-c] == player ){
+        var z = false;
+        while( c > 1 && ( x - c ) >= 0  && !z){
+          /* K.Kimura ここのロジックがおかしい
+          ( board[y][x-d] == player ) となる d > 2 が存在していて、
+          かつ全ての 1 < c < d に対して ( board[y][x-c] == other ) が存在する時に for ループを実行するべき
+          */
+          if( board[y][x-c] == 0 ){
+            z = true;
+          }else if( board[y][x-c] == player ){
             for( var i = 1; i < c; i ++ ){
               this.board[y][x-i] = player;
             }
@@ -86,8 +102,11 @@ var reversi = class{
 
       if( x < this.board_size - 1 && board[y][x+1] == other ){
         var c = 2;
-        while( c > 1 && ( x + c ) < this.board_size ){
-          if( board[y][x+c] == player ){
+        var z = false;
+        while( c > 1 && ( x + c ) < this.board_size && !z ){
+          if( board[y][x+c] == 0 ){
+            z = true;
+          }else if( board[y][x+c] == player ){
             for( var i = 1; i < c; i ++ ){
               this.board[y][x+i] = player;
             }
@@ -101,8 +120,11 @@ var reversi = class{
       if( y < this.board_size - 1 ){
         if( x > 0 && board[y+1][x-1] == other ){
           var c = 2;
-          while( c > 1 && ( x - c ) >= 0 && ( y + c ) < this.board_size ){
-            if( board[y+c][x-c] == player ){
+          var z = false;
+          while( c > 1 && ( x - c ) >= 0 && ( y + c ) < this.board_size && !z ){
+            if( board[y+c][x-c] == 0 ){
+              z = true;
+            }else if( board[y+c][x-c] == player ){
               for( var i = 1; i < c; i ++ ){
                 this.board[y+i][x-i] = player;
               }
@@ -115,8 +137,11 @@ var reversi = class{
 
         if( board[y+1][x] == other ){
           var c = 2;
-          while( c > 1 && ( y + c ) < this.board_size ){
-            if( board[y+c][x] == player ){
+          var z = false;
+          while( c > 1 && ( y + c ) < this.board_size && !z ){
+            if( board[y+c][x] == 0 ){
+              z = true;
+            }else if( board[y+c][x] == player ){
               for( var i = 1; i < c; i ++ ){
                 this.board[y+i][x] = player;
               }
@@ -129,8 +154,11 @@ var reversi = class{
     
         if( x < this.board_size - 1 && board[y+1][x+1] == other ){
           var c = 2;
-          while( c > 1 && ( x + c ) < this.board_size && ( y + c ) < this.board_size ){
-            if( board[y+c][x+c] == player ){
+          var z = false;
+          while( c > 1 && ( x + c ) < this.board_size && ( y + c ) < this.board_size && !z ){
+            if( board[y+c][x+c] == 0 ){
+              z = true;
+            }else if( board[y+c][x+c] == player ){
               for( var i = 1; i < c; i ++ ){
                 this.board[y+i][x+i] = player;
               }
@@ -265,8 +293,11 @@ var reversi = class{
     if( y > 0 ){
       if( x > 0 && this.board[y-1][x-1] == o ){
         var c = 2;
-        while( ( x - c ) >= 0 && ( y - c ) >= 0 ){
-          if( this.board[y-c][x-c] == p ){
+        var z = false;
+        while( ( x - c ) >= 0 && ( y - c ) >= 0 && !z && !b ){
+          if( this.board[y-c][x-c] == 0 ){
+            z = true;
+          }else if( this.board[y-c][x-c] == p ){
             b = true;
           }
           c ++;
@@ -275,8 +306,11 @@ var reversi = class{
 
       if( this.board[y-1][x] == o ){
         var c = 2;
-        while( ( y - c ) >= 0 ){
-          if( this.board[y-c][x] == p ){
+        var z = false;
+        while( ( y - c ) >= 0 && !z && !b ){
+          if( this.board[y-c][x] == 0 ){
+            z = true;
+          }else if( this.board[y-c][x] == p ){
             b = true;
           }
           c ++;
@@ -285,8 +319,11 @@ var reversi = class{
 
       if( x < this.board_size - 1 && this.board[y-1][x+1] == o ){
         var c = 2;
-        while( ( x + c ) < this.board_size - 1 && ( y - c ) >= 0 ){
-          if( this.board[y-c][x+c] == p ){
+        var z = false;
+        while( ( x + c ) < this.board_size - 1 && ( y - c ) >= 0 && !z && !b ){
+          if( this.board[y-c][x+c] == 0 ){
+            z = true;
+          }else if( this.board[y-c][x+c] == p ){
             b = true;
           }
           c ++;
@@ -296,8 +333,11 @@ var reversi = class{
 
     if( x > 0 && this.board[y][x-1] == o ){
       var c = 2;
-      while( ( x - c ) >= 0 ){
-        if( this.board[y][x-c] == p ){
+      var z = false;
+      while( ( x - c ) >= 0 && !z && !b ){
+        if( this.board[y][x-c] == 0 ){
+          z = true;
+        }else if( this.board[y][x-c] == p ){
           b = true;
         }
         c ++;
@@ -306,8 +346,11 @@ var reversi = class{
 
     if( x < this.board_size - 1 && this.board[y][x+1] == o ){
       var c = 2;
-      while( ( x + c ) < this.board_size ){
-        if( this.board[y][x+c] == p ){
+      var z = false;
+      while( ( x + c ) < this.board_size && !z && !b ){
+        if( this.board[y][x+c] == 0 ){
+          z = true;
+        }else if( this.board[y][x+c] == p ){
           b = true;
         }
         c ++;
@@ -317,8 +360,11 @@ var reversi = class{
     if( y < this.board_size - 1 ){
       if( x > 0 && this.board[y+1][x-1] == o ){
         var c = 2;
-        while( ( x - c ) >= 0 && ( y + c ) < this.board_size ){
-          if( this.board[y+c][x-c] == p ){
+        var z = false;
+        while( ( x - c ) >= 0 && ( y + c ) < this.board_size && !z && !b ){
+          if( this.board[y+c][x-c] == 0 ){
+            z = true;
+          }else if( this.board[y+c][x-c] == p ){
             b = true;
           }
           c ++;
@@ -327,8 +373,11 @@ var reversi = class{
 
       if( this.board[y+1][x] == o ){
         var c = 2;
-        while( ( y + c ) < this.board_size ){
-          if( this.board[y+c][x] == p ){
+        var z = false;
+        while( ( y + c ) < this.board_size && !z && !b ){
+          if( this.board[y+c][x] == 0 ){
+            z = true;
+          }else if( this.board[y+c][x] == p ){
             b = true;
           }
           c ++;
@@ -337,8 +386,11 @@ var reversi = class{
     
       if( x < this.board_size - 1 && this.board[y+1][x+1] == o ){
         var c = 2;
-        while( ( x + c ) < this.board_size && ( y + c ) < this.board_size ){
-          if( this.board[y+c][x+c] == p ){
+        var z = false;
+        while( ( x + c ) < this.board_size && ( y + c ) < this.board_size && !z && !b ){
+          if( this.board[y+c][x+c] == 0 ){
+            z = true;
+          }else if( this.board[y+c][x+c] == p ){
             b = true;
           }
           c ++;
