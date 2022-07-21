@@ -35,17 +35,15 @@ var sess = {
 app.use( session( sess ) );
 
 app.get( '/', function( req, res ){
-  /*
-  res.contentType( 'application/json; charset=utf-8' );
-  res.write( JSON.stringify( { status: true }, null, 2 ) );
-  res.end();
-  */
-  res.render( 'index', { board_size: BOARD_SIZE } );
+  //res.render( 'index', { board_size: BOARD_SIZE } );
+  res.render( 'status', { board_size: BOARD_SIZE } );
 });
 
+/*
 app.get( '/status', function( req, res ){
   res.render( 'status', { board_size: BOARD_SIZE } );
 });
+*/
 
 
 var port = process.env.PORT || 8080;

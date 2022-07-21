@@ -10,6 +10,7 @@ var Reversi = require( '../public/reversi' );
 
 process.env.PGSSLMODE = 'no-verify';
 var PG = require( 'pg' );
+const reversi = require('../public/reversi');
 PG.defaults.ssl = true;
 var database_url = 'DATABASE_URL' in process.env ? process.env.DATABASE_URL : ''; 
 var pg = null;
@@ -175,9 +176,15 @@ api.readReversi = async function( reversi_id ){
             }else{
               if( result && result.rows && result.rows.length > 0 ){
                 var reversi = result.rows[0];
-                reversi.board = JSON.parse( reversi.board );
-                reversi.next_choices = JSON.parse( reversi.next_choices );
-                reversi.next_status = JSON.parse( reversi.next_status );
+                if( typeof reversi.board == 'string' ){
+                  reversi.board = JSON.parse( reversi.board );
+                }
+                if( typeof reversi.next_choices == 'string' ){
+                  reversi.next_choices = JSON.parse( reversi.next_choices );
+                }
+                if( typeof reversi.next_status == 'string' ){
+                  reversi.next_status = JSON.parse( reversi.next_status );
+                }
                 reversi.next_choices_num = reversi.next_choices.length;
                 resolve( { status: true, result: reversi } );
               }else{
@@ -291,9 +298,15 @@ api.startProcess = async function( board_size ){
                               resolve( { status: true, result: null } );
                             }else{
                               var reversi1 = result.rows[0];   //. board や next_choices, next_status などが文字列のまま
-                              reversi1.board = JSON.parse( reversi1.board );
-                              reversi1.next_choices = JSON.parse( reversi1.next_choices );
-                              reversi1.next_status = JSON.parse( reversi1.next_status );
+                              if( typeof reversi1.board == 'string' ){
+                                reversi1.board = JSON.parse( reversi1.board );
+                              }
+                              if( typeof reversi1.next_choices == 'string' ){
+                                reversi1.next_choices = JSON.parse( reversi1.next_choices );
+                              }
+                              if( typeof reversi1.next_status == 'string' ){
+                                reversi1.next_status = JSON.parse( reversi1.next_status );
+                              }
                               reversi1.next_choices_num = reversi1.next_choices.length;
                               resolve( { status: true, result: reversi1 } );
                             }
@@ -301,9 +314,15 @@ api.startProcess = async function( board_size ){
                         });
                       }else{
                         var reversi1 = result.rows[0];   //. board や next_choices, next_status などが文字列のまま
-                        reversi1.board = JSON.parse( reversi1.board );
-                        reversi1.next_choices = JSON.parse( reversi1.next_choices );
-                        reversi1.next_status = JSON.parse( reversi1.next_status );
+                        if( typeof reversi1.board == 'string' ){
+                          reversi1.board = JSON.parse( reversi1.board );
+                        }
+                        if( typeof reversi1.next_choices == 'string' ){
+                          reversi1.next_choices = JSON.parse( reversi1.next_choices );
+                        }
+                        if( typeof reversi1.next_status == 'string' ){
+                          reversi1.next_status = JSON.parse( reversi1.next_status );
+                        }
                         reversi1.next_choices_num = reversi1.next_choices.length;
                         resolve( { status: true, result: reversi1 } );
                       }
@@ -370,7 +389,9 @@ api.nextProcess = async function( board_size ){
                     }else{
                       var r0 = result.rows[0];   
                       var reversi0 = new Reversi( r0.id, r0.parent_id, r0.depth, r0.choice_idx, [ -1, -1 ], JSON.parse( r0.board ), r0.next_player );
-                      reversi0.next_status = JSON.parse( r0.next_status );
+                      if( typeof reversi0.next_status == 'string' ){
+                        reversi0.next_status = JSON.parse( r0.next_status );
+                      }
                       reversi0.next_processed_num = r0.next_processed_num;
                       reversi0.changeStatus( 0, -1 );
                       this.updateReversi( reversi0.id, reversi0.next_status, reversi0.next_processed_num ).then( function( result ){
@@ -393,7 +414,9 @@ api.nextProcess = async function( board_size ){
               }else{
                 var r0 = result.rows[0];   
                 var reversi0 = new Reversi( r0.id, r0.parent_id, r0.depth, r0.choice_idx, [ -1, -1 ], JSON.parse( r0.board ), r0.next_player );
-                reversi0.next_status = JSON.parse( r0.next_status );
+                if( typeof r0.next_status == 'string' ){
+                  reversi0.next_status = JSON.parse( r0.next_status );
+                }
                 reversi0.next_processed_num = r0.next_processed_num;
                 reversi0.changeStatus( r0.next_processed_num, -1 );
                 this.updateReversi( reversi0.id, reversi0.next_status, reversi0.next_processed_num ).then( function( result ){
@@ -439,9 +462,13 @@ api.updateProcess = async function( reversi1 ){
                 var r = await this.readReversi( id );
                 if( r && r.status ){
                   var r0 = r.result;
-                  r0.board = JSON.parse( r0.board );
+                  if( typeof r0.board == 'string' ){
+                    r0.board = JSON.parse( r0.board );
+                  }
                   var reversi0 = new Reversi( r0.id, r0.parent_id, r0.depth, r0.choice_idx, [ -1, -1 ], r0.board, r0.next_player );
-                  reversi0.next_status = JSON.parse( r0.next_status );
+                  if( typeof reversi0.next_status == 'string' ){
+                    reversi0.next_status = JSON.parse( r0.next_status );
+                  }
                   reversi0.next_processed_num = r0.next_processed_num;
                   reversi0.changeStatus( choice_idx, 1 );
                   this.updateReversi( reversi0.id, reversi0.next_status, reversi0.next_processed_num ).then( function( result ){
@@ -649,9 +676,15 @@ api.readRoot = async function( board_size ){
                     resolve( { status: false, error: 'no root info found for board_size = ' + board_size + '.' } );
                   }else{
                     var reversi0 = result.rows[0];   //. board や next_choices, next_status などが文字列のまま
-                    reversi0.board = JSON.parse( reversi0.board );
-                    reversi0.next_choices = JSON.parse( reversi0.next_choices );
-                    reversi0.next_status = JSON.parse( reversi0.next_status );
+                    if( typeof reversi0.board == 'string' ){
+                      reversi0.board = JSON.parse( reversi0.board );
+                    }
+                    if( typeof reversi0.next_choices == 'string' ){
+                      reversi0.next_choices = JSON.parse( reversi0.next_choices );
+                    }
+                    if( typeof reversi0.next_status == 'string' ){
+                      reversi0.next_status = JSON.parse( reversi0.next_status );
+                    }
                     reversi0.next_choices_num = reversi0.next_choices.length;
                     resolve( { status: true, result: reversi0 } );
                   }
@@ -700,9 +733,15 @@ api.readInfo = async function( parent_id, choice_idx ){
                     resolve( { status: false, error: 'no info found for parent_id = ' + parent_id + ' and choice_idx = ' + choice_idx + '.' } );
                   }else{
                     var reversi0 = result.rows[0];   //. board や next_choices, next_status などが文字列のまま
-                    reversi0.board = JSON.parse( reversi0.board );
-                    reversi0.next_choices = JSON.parse( reversi0.next_choices );
-                    reversi0.next_status = JSON.parse( reversi0.next_status );
+                    if( typeof reversi0.board == 'string' ){
+                      reversi0.board = JSON.parse( reversi0.board );
+                    }
+                    if( typeof reversi0.next_choices == 'string' ){
+                      reversi0.next_choices = JSON.parse( reversi0.next_choices );
+                    }
+                    if( typeof reversi0.next_status == 'string' ){
+                      reversi0.next_status = JSON.parse( reversi0.next_status );
+                    }
                     reversi0.next_choices_num = reversi0.next_choices.length;
                     resolve( { status: true, result: reversi0 } );
                   }
