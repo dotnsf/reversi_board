@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8"/>
+<script type="text/javascript" src="//code.jquery.com/jquery-2.2.4.min.js"></script>
+<link href="//maxcdn.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" rel="stylesheet"/>
+<script src="//maxcdn.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
+<script src="./reversi.js"></script>
+<script src="./cvi_busy_lib.js"></script>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+
+<!--
+<link rel="shortcut icon" href="/icon.png" type="image/png"/>
+<link rel="icon" href="/icon.png" type="image/png"/>
+<link rel="apple-touch-icon" href="/icon.png"/>
+-->
+
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black"/>
+<meta name="apple-mobile-web-app-title" content="Reversi Status"/>
+<title>Reversi Status - <%= board_size %></title>
+
+<style type="text/css">
+html, body{
+  background-color: #fafafa;
+  font-size: 20px;
+  color: #333;
+}
+.monospace{
+  font-family: "monospace";
+}
+.mytable{
+  background-color: #060;
+}
+</style>
+<script>
+$(function(){
+  $.ajax({
+    url: '/api/rootinfo?board_size=<%= board_size %>',
+    type: 'GET',
+    success: function( result ){
+      if( result.status ){
+        if( result.result ){
+          render_info( result.result );
+        }else{
+          console.log( 'GET /api/rootinfo failed.' );
+        }
+      }
+    },
+    error: function( e0, e1, e2 ){
+      console.log( e0, e1, e2 );
+    }
+  });
+});
+
+var obj = null;
+function getInfo( parent_id, choice_idx ){
+  obj = getBusyOverlay( 'viewport', {color:'black', opacity:0.5, text:'処理中・・', style:'text-decoration:blink; font-weight:bold; font-size:12px; color:white;' } );
+  $.ajax({
+    url: '/api/infobyparentandchoice?parent_id=' + parent_id + '&choice_idx=' + choice_idx,
+    type: 'GET',
+    success: function( result ){
+      obj.remove();
+      if( result.status ){
+        if( result.result ){
+          render_info( result.result );
+        }else{
+          console.log( 'GET /api/infobyparentandchoice failed.' );
+        }
+      }
+    },
+    error: function( e0, e1, e2 ){
+      obj.remove();
+      console.log( e0, e1, e2 );
+    }
+  });
+}
+
+function getParent( parent_id ){
+  obj = getBusyOverlay( 'viewport', {color:'black', opacity:0.5, text:'処理中・・', style:'text-decoration:blink; font-weight:bold; font-size:12px; color:white;' } );
+  $.ajax({
+    url: '/api/reversi/' + parent_id,
+    type: 'GET',
+    success: function( result ){
+      console.log( result );
+      obj.remove();
+      if( result.status ){
+        if( result.result ){
+          render_info( result.result );
+        }else{
+          console.log( 'GET /api/reversi/:id failed.' );
+        }
+      }
+    },
+    error: function( e0, e1, e2 ){
+      obj.remove();
+      console.log( e0, e1, e2 );
+    }
+  });
+}
+
+var pcs = [ '〇', '・', '●' ];
+function render_info( info ){
+  if( info ){
+    var joint = info.parent_id ? ( '<button class="btn btn-warning" onClick=getParent("' + info.parent_id + '");>(Back)</button><br/>' ) : ''
+      + info.choice_idx > -1 ? '　|\n (' + info.choice_idx + ')\n　↓\n' : ''
+      + '<br/>深さ:' + info.depth + '<br/><br/>';
+    var title = pcs[2] + ': ' + info.player0_count + ', ' + pcs[0] + ': ' + info.player1_count + '<br/>'
+      + ( info.choice_idx > -1 ? '前手: [' + info.choice_y + ',' + info.choice_x + ']<br/>'  : '' )
+      + '手番:' + pcs[info.next_player+1] + '<br/><br/>';
+    var table = joint + title + '<table style="table-layout: fixed;" class="mytable">';
+    for( var i = 0; i < info.board_size; i ++ ){
+      var tr = '<tr>';
+      for( var j = 0; j < info.board_size; j ++ ){
+        tr += '<td class="monospace">' + pcs[info.board[i][j]+1] + '</td>';
+      }
+      tr += '</tr>';
+      table += tr;
+    }
+    table += '</table><br/><br/>';
+    for( var i = 0; i < info.next_choices.length; i ++ ){
+      var btn = '<button class="btn btn-primary" onClick=getInfo("' + info.id + '",' + i + ');>[' + info.next_choices[i][1] + ',' + info.next_choices[i][0] + ']</button>';
+      table += btn;
+    }
+
+    $('#info_div').html( table );
+  }else{
+    $('#info_div').html( '' );
+  }
+}
+</script>
+</head>
+<body>
+
+<div class="container">
+
+  <div><pre id="info_div">
+  </pre></div>
+
+</div>
+
+</html>

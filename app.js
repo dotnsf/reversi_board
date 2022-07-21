@@ -43,6 +43,10 @@ app.get( '/', function( req, res ){
   res.render( 'index', { board_size: BOARD_SIZE } );
 });
 
+app.get( '/status', function( req, res ){
+  res.render( 'status', { board_size: BOARD_SIZE } );
+});
+
 
 var port = process.env.PORT || 8080;
 app.listen( port );

@@ -174,7 +174,12 @@ api.readReversi = async function( reversi_id ){
               resolve( { status: false, error: err } );
             }else{
               if( result && result.rows && result.rows.length > 0 ){
-                resolve( { status: true, result: result.rows[0] } );
+                var reversi = result.rows[0];
+                reversi.board = JSON.parse( reversi.board );
+                reversi.next_choices = JSON.parse( reversi.next_choices );
+                reversi.next_status = JSON.parse( reversi.next_status );
+                reversi.next_choices_num = reversi.next_choices.length;
+                resolve( { status: true, result: reversi } );
               }else{
                 resolve( { status: false, error: 'no data' } );
               }
@@ -621,6 +626,110 @@ api.deleteReversis = async function( board_size ){
   });
 };
 
+api.readRoot = async function( board_size ){
+  return new Promise( async ( resolve, reject ) => {
+    if( pg ){
+      if( board_size == 4 || board_size == 6 || board_size == 8 ){
+        conn = await pg.connect();
+        if( conn ){
+          try{
+            //. 指定サイズのデータが存在していないことを確認してから作成する
+            var sql = "select * from reversi where board_size = " + board_size + " and depth = 0";
+            var query = { text: sql, values: [] };
+            conn.query( query, ( err, result ) => {
+              if( err ){
+                console.log( err );
+                resolve( { status: false, error: err } );
+              }else{
+                if( err ){
+                  console.log( err );
+                  resolve( { status: false, error: err } );
+                }else{
+                  if( result.rows.length == 0 ){
+                    resolve( { status: false, error: 'no root info found for board_size = ' + board_size + '.' } );
+                  }else{
+                    var reversi0 = result.rows[0];   //. board や next_choices, next_status などが文字列のまま
+                    reversi0.board = JSON.parse( reversi0.board );
+                    reversi0.next_choices = JSON.parse( reversi0.next_choices );
+                    reversi0.next_status = JSON.parse( reversi0.next_status );
+                    reversi0.next_choices_num = reversi0.next_choices.length;
+                    resolve( { status: true, result: reversi0 } );
+                  }
+                }
+              }
+            });
+          }catch( e ){
+            console.log( e );
+            resolve( { status: false, error: err } );
+          }finally{
+            if( conn ){
+              conn.release();
+            }
+          }
+        }else{
+          resolve( { status: false, error: 'db not ready.' } );
+        }
+      }else{
+        resolve( { status: false, error: 'no proper board_size.' } );
+      }
+    }else{
+      resolve( { status: false, error: 'no connection.' } );
+    }
+  });
+};
+
+api.readInfo = async function( parent_id, choice_idx ){
+  return new Promise( async ( resolve, reject ) => {
+    if( pg ){
+      if( parent_id != null && choice_idx > -1 ){
+        conn = await pg.connect();
+        if( conn ){
+          try{
+            //. 指定サイズのデータが存在していないことを確認してから作成する
+            var sql = "select * from reversi where parent_id = $1 and choice_idx = $2";
+            var query = { text: sql, values: [ parent_id, choice_idx ] };
+            conn.query( query, ( err, result ) => {
+              if( err ){
+                resolve( { status: false, error: err } );
+              }else{
+                if( err ){
+                  console.log( err );
+                  resolve( { status: false, error: err } );
+                }else{
+                  if( result.rows.length == 0 ){
+                    resolve( { status: false, error: 'no info found for parent_id = ' + parent_id + ' and choice_idx = ' + choice_idx + '.' } );
+                  }else{
+                    var reversi0 = result.rows[0];   //. board や next_choices, next_status などが文字列のまま
+                    reversi0.board = JSON.parse( reversi0.board );
+                    reversi0.next_choices = JSON.parse( reversi0.next_choices );
+                    reversi0.next_status = JSON.parse( reversi0.next_status );
+                    reversi0.next_choices_num = reversi0.next_choices.length;
+                    resolve( { status: true, result: reversi0 } );
+                  }
+                }
+              }
+            });
+          }catch( e ){
+            console.log( e );
+            resolve( { status: false, error: err } );
+          }finally{
+            if( conn ){
+              conn.release();
+            }
+          }
+        }else{
+          resolve( { status: false, error: 'db not ready.' } );
+        }
+      }else{
+        resolve( { status: false, error: 'no proper parent_id and/or choice_idx.' } );
+      }
+    }else{
+      resolve( { status: false, error: 'no connection.' } );
+    }
+  });
+};
+
+
 
 api.post( '/reversi/start_process', async function( req, res ){
   res.contentType( 'application/json; charset=utf-8' );
@@ -772,6 +881,35 @@ api.delete( '/reversis', function( req, res ){
     res.write( JSON.stringify( result, null, 2 ) );
     res.end();
   });
+});
+
+api.get( '/rootinfo', async function( req, res ){
+  res.contentType( 'application/json; charset=utf-8' );
+
+  var bsize = req.query.board_size ? parseInt( req.query.board_size ) : board_size;
+  api.readRoot( bsize ).then( function( result ){
+    res.status( result.status ? 200 : 400 );
+    res.write( JSON.stringify( result, null, 2 ) );
+    res.end();
+  });
+});
+
+api.get( '/infobyparentandchoice', async function( req, res ){
+  res.contentType( 'application/json; charset=utf-8' );
+
+  var parent_id = req.query.parent_id ? req.query.parent_id : '';
+  var choice_idx = req.query.choice_idx ? parseInt( req.query.choice_idx ) : -1;
+  if( parent_id && choice_idx > -1 ){
+    api.readInfo( parent_id, choice_idx ).then( function( result ){
+      res.status( result.status ? 200 : 400 );
+      res.write( JSON.stringify( result, null, 2 ) );
+      res.end();
+    });
+  }else{
+    res.status( 400 );
+    res.write( JSON.stringify( { status: false, error: 'parameter both parent_id and choice_idx are mandatory.' }, null, 2 ) );
+    res.end();
+  }
 });
 
 
