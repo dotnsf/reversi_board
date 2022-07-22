@@ -66,11 +66,15 @@ function getInfo( parent_id, choice_idx ){
         if( result.result ){
           render_info( result.result );
         }else{
+          alert( JSON.stringify( result.error ) );
           console.log( 'GET /api/infobyparentandchoice failed.' );
         }
+      }else{
+        alert( JSON.stringify( result.error ) );
       }
     },
     error: function( e0, e1, e2 ){
+      alert( JSON.stringify( e1 ) + JSON.stringify( e2 ) );
       obj.remove();
       console.log( e0, e1, e2 );
     }
