@@ -74,7 +74,10 @@ function getInfo( parent_id, choice_idx ){
       }
     },
     error: function( e0, e1, e2 ){
-      alert( JSON.stringify( e1 ) + JSON.stringify( e2 ) );
+      //. まだ解析できていないなら、解析してもらうのもいいかも
+
+      //alert( JSON.stringify( e1 ) + JSON.stringify( e2 ) ); "Error", "Bad Request"
+      alert( '解析エラー、まだその手番が解析できていない可能性があります。' );
       obj.remove();
       console.log( e0, e1, e2 );
     }
@@ -129,6 +132,11 @@ function render_info( info ){
     }
 
     $('#info_div').html( table );
+
+    if( info.next_choices.length == 0 ){
+      var msg = info.player0_count + ' - ' + info.player1_count + 'で' + ( info.player0_count > info.player1_count ? '先手勝ち' : ( ( info.player0_count < info.player1_count ) ? '後手勝ち' : '引き分け' ) ) + 'です。';
+      alert( msg );
+    }
   }else{
     $('#info_div').html( '' );
   }
