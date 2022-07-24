@@ -81,12 +81,40 @@ function getInfo( parent_id, choice_idx ){
       }
     },
     error: function( e0, e1, e2 ){
-      //. まだ解析できていないなら、解析してもらうのもいいかも
-
       //alert( JSON.stringify( e1 ) + JSON.stringify( e2 ) ); "Error", "Bad Request"
-      alert( '解析エラー、まだその手番が解析できていない可能性があります。' );
-      obj.remove();
+      //alert( '解析エラー、まだその手番が解析できていない可能性があります。' );
+      //obj.remove();
       console.log( e0, e1, e2 );
+
+      //. まだ解析できていないなら、解析してもらうのもいいかも
+      if( confirm( 'この場で解析を進めますか（よく分からない場合は「いいえ」を選んでください）？' ) ){
+        var choice = current_info.next_choices[choice_idx];
+        var reversi1 = new reversi( null, current_info.id, current_info.depth + 1, choice_idx, choice, current_info.board, current_info.next_player );
+        $.ajax({
+          url: '/api/reversi/update_process',
+          type: 'POST',
+          data: { reversi: reversi1 },
+          success: function( result ){
+            obj.remove();
+            if( result.status ){
+              if( result.result ){
+                result.result.newdata = true;
+                render_info( result.result );
+              }else{
+                alert( JSON.stringify( result.error ) );
+                console.log( 'POST /api/reversi/update_process failed.' );
+              }
+            }else{
+              alert( JSON.stringify( result.error ) );
+            }
+          },
+          error: function( e0, e1, e2 ){
+            obj.remove();
+            alert( '解析エラー、まだその手番の解析が不充分な可能性があります。' );
+            console.log( e0, e1, e2 );
+          }
+        });
+      }
     }
   });
 }
@@ -114,9 +142,12 @@ function getParent( parent_id ){
   });
 }
 
+var current_info = null;
 var pcs = [ '〇', '・', '●' ];
 function render_info( info ){
   if( info ){
+    current_info = info;
+
     var joint = info.parent_id ? ( '<button class="btn btn-warning" onClick=getParent("' + info.parent_id + '");>(Back)</button><br/>' ) : ''
       + info.choice_idx > -1 ? '　|\n (' + info.choice_idx + ')\n　↓\n' : ''
       + '<br/>深さ:' + info.depth + '<br/><br/>';
@@ -136,6 +167,10 @@ function render_info( info ){
     for( var i = 0; i < info.next_choices.length; i ++ ){
       var btn = '<button class="btn btn-primary mybtn" id="btn_' + info.id + '" onClick=getInfo("' + info.id + '",' + i + ');>[' + info.next_choices[i][1] + ',' + info.next_choices[i][0] + ']</button>';
       table += btn;
+    }
+    table += '<br/>';
+    if( info.newdata ){
+      table += "<span class='badge badge-danger'>(New data)</span><br/>";
     }
 
     $('#info_div').html( table );
