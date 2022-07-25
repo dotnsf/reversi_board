@@ -36,7 +36,11 @@ app.use( session( sess ) );
 
 app.get( '/', function( req, res ){
   //res.render( 'index', { board_size: BOARD_SIZE } );
-  res.render( 'status', { board_size: BOARD_SIZE } );
+  var id = null;
+  if( req.params && req.params.id ){
+    id = req.params.id;
+  }
+  res.render( 'status', { board_size: BOARD_SIZE, id: id } );
 });
 
 app.get( '/work', function( req, res ){

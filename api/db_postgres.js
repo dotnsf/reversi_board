@@ -768,6 +768,63 @@ api.readInfo = async function( parent_id, choice_idx ){
   });
 };
 
+//. #12
+api.readInfoById = async function( id ){
+  return new Promise( async ( resolve, reject ) => {
+    if( pg ){
+      if( id != null ){
+        conn = await pg.connect();
+        if( conn ){
+          try{
+            //. 指定サイズのデータが存在していないことを確認してから作成する
+            var sql = "select * from reversi where id = $1";
+            var query = { text: sql, values: [ id ] };
+            conn.query( query, ( err, result ) => {
+              if( err ){
+                resolve( { status: false, error: err } );
+              }else{
+                if( err ){
+                  console.log( err );
+                  resolve( { status: false, error: err } );
+                }else{
+                  if( result.rows.length == 0 ){
+                    resolve( { status: false, error: 'no info found for id = ' + id + '.' } );
+                  }else{
+                    var reversi0 = result.rows[0];   //. board や next_choices, next_status などが文字列のまま
+                    if( typeof reversi0.board == 'string' ){
+                      reversi0.board = JSON.parse( reversi0.board );
+                    }
+                    if( typeof reversi0.next_choices == 'string' ){
+                      reversi0.next_choices = JSON.parse( reversi0.next_choices );
+                    }
+                    if( typeof reversi0.next_status == 'string' ){
+                      reversi0.next_status = JSON.parse( reversi0.next_status );
+                    }
+                    reversi0.next_choices_num = reversi0.next_choices.length;
+                    resolve( { status: true, result: reversi0 } );
+                  }
+                }
+              }
+            });
+          }catch( e ){
+            console.log( e );
+            resolve( { status: false, error: err } );
+          }finally{
+            if( conn ){
+              conn.release();
+            }
+          }
+        }else{
+          resolve( { status: false, error: 'db not ready.' } );
+        }
+      }else{
+        resolve( { status: false, error: 'no proper id.' } );
+      }
+    }else{
+      resolve( { status: false, error: 'no connection.' } );
+    }
+  });
+};
 
 
 api.post( '/reversi/start_process', async function( req, res ){
@@ -947,6 +1004,24 @@ api.get( '/infobyparentandchoice', async function( req, res ){
   }else{
     res.status( 400 );
     res.write( JSON.stringify( { status: false, error: 'parameter both parent_id and choice_idx are mandatory.' }, null, 2 ) );
+    res.end();
+  }
+});
+
+//. #12
+api.get( '/infobyid', async function( req, res ){
+  res.contentType( 'application/json; charset=utf-8' );
+
+  var id = req.query.id ? req.query.id : '';
+  if( id ){
+    api.readInfoById( id ).then( function( result ){
+      res.status( result.status ? 200 : 400 );
+      res.write( JSON.stringify( result, null, 2 ) );
+      res.end();
+    });
+  }else{
+    res.status( 400 );
+    res.write( JSON.stringify( { status: false, error: 'parameter both id is mandatory.' }, null, 2 ) );
     res.end();
   }
 });

@@ -43,6 +43,24 @@ html, body{
 </style>
 <script>
 $(function(){
+<% if( id ){ %>
+  $.ajax({
+    url: '/api/infobyid?board_size=<%= board_size %>&id=<%= id %>',
+    type: 'GET',
+    success: function( result ){
+      if( result.status ){
+        if( result.result ){
+          render_info( result.result );
+        }else{
+          console.log( 'GET /api/infobyid failed.' );
+        }
+      }
+    },
+    error: function( e0, e1, e2 ){
+      console.log( e0, e1, e2 );
+    }
+  });
+<% }else{ %>
   $.ajax({
     url: '/api/rootinfo?board_size=<%= board_size %>',
     type: 'GET',
@@ -59,6 +77,7 @@ $(function(){
       console.log( e0, e1, e2 );
     }
   });
+<% } %>
 });
 
 var obj = null;
