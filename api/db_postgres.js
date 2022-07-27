@@ -142,7 +142,7 @@ api.createReversis = function( reversis ){
               //. "error: duplicate key value violates unique constraint "reversi_pkey""" ??
               //. ↑これが発生しても１分後に再処理するので気にしなくていい？
               console.log( 'bulk insert', err );
-              resolve( { status: true, results: result } );
+              resolve( { status: true, results: null } );
             }else{
               resolve( { status: true, results: result } );
             }
@@ -424,30 +424,35 @@ api.updateProcess = async function( reversis ){
         try{
           this.createReversis( reversis ).then( async ( result ) => {
             if( result && result.status ){
-              //. 最後に親レコードのステータスを更新する
-              var id = reversis[0].parent_id;
-              if( id ){
-                var r = await this.readReversi( id );
-                if( r && r.status ){
-                  var r0 = r.result;
-                  if( typeof r0.board == 'string' ){
-                    r0.board = JSON.parse( r0.board );
-                  }
-                  var reversi0 = new Reversi( r0.id, r0.parent_id, r0.depth, r0.choice_idx, [ -1, -1 ], JSON.parse( JSON.stringify( r0.board ) ), r0.next_player );
-                  reversi0.next_processed_num = r0.next_processed_num;
-                  reversi0.changeStatus( 1 );
-                  this.updateReversi( reversi0.id, reversi0.next_processed_num ).then( function( result ){
-                    if( result && result.status ){
-                      resolve( { status: true, results: reversis } );
-                    }else{
-                      resolve( { status: false, error: 'update reversi0 failed.' } );
+              if( result.results ){
+                //. 最後に親レコードのステータスを更新する
+                var id = reversis[0].parent_id;
+                if( id ){
+                  var r = await this.readReversi( id );
+                  if( r && r.status ){
+                    var r0 = r.result;
+                    if( typeof r0.board == 'string' ){
+                      r0.board = JSON.parse( r0.board );
                     }
-                  });
+                    var reversi0 = new Reversi( r0.id, r0.parent_id, r0.depth, r0.choice_idx, [ -1, -1 ], JSON.parse( JSON.stringify( r0.board ) ), r0.next_player );
+                    reversi0.next_processed_num = r0.next_processed_num;
+                    reversi0.changeStatus( 1 );
+                    this.updateReversi( reversi0.id, reversi0.next_processed_num ).then( function( result ){
+                      if( result && result.status ){
+                        resolve( { status: true, result: reversi0 } );
+                      }else{
+                        resolve( { status: false, error: 'update reversi0 failed.' } );
+                      }
+                    });
+                  }else{
+                    resolve( { status: false, error: r.error } );
+                  }
                 }else{
-                  resolve( { status: false, error: r.error } );
+                  resolve( { status: false, error: 'no parent.' } );
                 }
               }else{
-                resolve( { status: false, error: 'no parent.' } );
+                //. バルクインサートに失敗しているので、無視して（親レコードは処理中のまま）続行できるようにする
+                resolve( { status: true, result: null } );
               }
             }else{
               resolve( { status: false, error: 'create reversis failed.' } );

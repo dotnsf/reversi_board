@@ -117,7 +117,7 @@ function getInfo( parent_id, choice_idx ){
             obj.remove();
             if( result.status ){
               if( result.result ){
-                result.result.newdata = true;
+                result.results.newdata = true;
                 render_info( result.result );
               }else{
                 alert( JSON.stringify( result.error ) );
