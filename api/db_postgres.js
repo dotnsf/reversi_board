@@ -377,9 +377,29 @@ api.nextProcess = async function( board_size ){
                       var r = await this.startProcess( board_size );
                       resolve( r );
                     }else{
-                      //. 解析終了？
-                      //. だと思うが、next_processed_num = -1 のままのケースが考えられる。１分後に再処理すべき？
-                      resolve( { status: true, result: null } );
+                      //. 解析終了、だと思うが、next_processed_num = -1 のままのケースが考えられる。１分後に再処理すべき？
+                      sql = "select * from reversi where board_size = $1 and next_choices_num > 0 and next_processed_num = -1 order by depth, updated limit 1";
+                      query = { text: sql, values: [ board_size ] };
+                      conn.query( query, async ( err, result ) => {
+                        if( err ){
+                          console.log( err );
+                          resolve( { status: false, error: err } );
+                        }else{
+                          if( result.rows.length == 0 ){
+                            //. 解析終了
+                            resolve( { status: true, result: null } );
+                          }else{
+                            //. 見つかった
+                            var r0 = result.rows[0];   
+                            var reversi0 = new Reversi( r0.id, r0.parent_id, r0.depth, r0.choice_idx, [ -1, -1 ], JSON.parse( r0.board ), r0.next_player );
+                            reversi0.next_processed_num = r0.next_processed_num;
+                            reversi0.changeStatus( -1 );
+
+                            //. 見つかった状態の reversi0 を返す
+                            resolve( { status: true, result: reversi0 } );
+                          }
+                        }
+                      });
                     }
                   }
                 });
