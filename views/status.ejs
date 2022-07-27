@@ -108,7 +108,7 @@ function getInfo( parent_id, choice_idx ){
       //. まだ解析できていないなら、解析してもらうのもいいかも
       if( confirm( 'この場で解析を進めますか（よく分からない場合は「いいえ」を選んでください）？' ) ){
         var choice = current_info.next_choices[choice_idx];
-        var reversi1 = new reversi( null, current_info.id, current_info.depth + 1, choice_idx, choice, current_info.board, current_info.next_player );
+        var reversi1 = new reversi( null, current_info.id, current_info.depth + 1, choice_idx, choice, JSON.parse( JSON.stringify( current_info.board ) ), current_info.next_player );
         $.ajax({
           url: '/api/reversi/update_process',
           type: 'POST',

@@ -72,7 +72,7 @@ api.createReversi = async function( reversi ){
         try{
           var sql = 'insert into reversi( id, parent_id, board_size, depth, choice_idx, choice_x, choice_y, board, next_choices, next_choices_num, next_processed_num, player0_count, player1_count, next_player, value, value_status, created, updated ) values ( $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18 )';
           if( !reversi.id ){
-            reversi.id = uuidv4();
+            reversi.id = generateUUID(); //uuidv4();
           }
           var t = ( new Date() ).getTime();
           reversi.created = t;
@@ -120,7 +120,7 @@ api.createReversis = function( reversis ){
           var params = [];
           for( var i = 0; i < reversis.length; i ++ ){
             if( !reversis[i].id ){
-              reversis[i].id = uuidv4();
+              reversis[i].id = generateUUID(); //uuidv4();
             }
             var t = ( new Date() ).getTime();
             reversis[i].created = t;
@@ -432,7 +432,7 @@ api.updateProcess = async function( reversis ){
                   if( typeof r0.board == 'string' ){
                     r0.board = JSON.parse( r0.board );
                   }
-                  var reversi0 = new Reversi( r0.id, r0.parent_id, r0.depth, r0.choice_idx, [ -1, -1 ], r0.board, r0.next_player );
+                  var reversi0 = new Reversi( r0.id, r0.parent_id, r0.depth, r0.choice_idx, [ -1, -1 ], JSON.parse( JSON.stringify( r0.board ) ), r0.next_player );
                   reversi0.next_processed_num = r0.next_processed_num;
                   reversi0.changeStatus( 1 );
                   this.updateReversi( reversi0.id, reversi0.next_processed_num ).then( function( result ){
@@ -809,7 +809,7 @@ api.post( '/reversis', async function( req, res ){
   var reversis = req.body;
   reversis.forEach( function( reversi ){
     if( !reversi.id ){
-      reversi.id = uuidv4();
+      reversi.id = generateUUID(); //uuidv4();
     }
   });
 
@@ -978,6 +978,12 @@ function initReversi( board_size ){
 
   return reversi0;
 };
+
+function generateUUID(){
+  did = ( new Date().getTime().toString(16) ) + Math.floor( 1000 * Math.random() ).toString(16);
+
+  return did;
+}
 
 //. api をエクスポート
 module.exports = api;
