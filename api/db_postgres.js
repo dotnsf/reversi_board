@@ -139,7 +139,6 @@ api.createReversis = function( reversis ){
           var sql = format( 'insert into reversi( id, parent_id, board_size, depth, choice_idx, choice_x, choice_y, board, next_choices, next_choices_num, next_processed_num, player0_count, player1_count, next_player, value, value_status, created, updated ) values %L', params );
           conn.query( sql, [], function( err, result ){
             if( err ){
-              //. "error: syntax error at end of input" ??
               //. "error: duplicate key value violates unique constraint "reversi_pkey""" ??
               console.log( 'bulk insert', err );
               resolve( { status: true, results: result } );
@@ -980,7 +979,7 @@ function initReversi( board_size ){
 };
 
 function generateUUID(){
-  did = ( new Date().getTime().toString(16) ) + Math.floor( 1000 * Math.random() ).toString(16);
+  did = ( new Date().getTime().toString(16) ) + Math.floor( 10000000 * Math.random() ).toString(16);
 
   return did;
 }
