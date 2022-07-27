@@ -9,7 +9,6 @@ var reversi = class{
     this.choice = choice;  //. [ y, x ]
     this.board = board;  //. [ [ 0, 0, 0, 0, 0, 0, 0, 0 ], .. ]
     this.next_choices = [];  //. [ [ 2, 3 ], .. ]
-    this.next_status = [];
     this.next_choices_num = 0;
     this.next_processed_num = 0;  //. ここで処理済／未済を判断する
     this.player0_count = 0;
@@ -190,7 +189,6 @@ var reversi = class{
         if( this.board[i][j] == 0 && this.playerChoicable( j, i, this.next_player )){
           //this.next_choices.push( [ j, i ] );
           this.next_choices.push( [ i, j ] );
-          this.next_status.push( 0 );
         }
       }
     }
@@ -202,13 +200,11 @@ var reversi = class{
       //. 次の手で相手はパスしかない
       this.next_player *= -1;
       this.next_choices = [];
-      this.next_status = [];
       for( var i = 0; i < this.board_size; i ++ ){
         for( var j = 0; j < this.board_size; j ++ ){
           if( this.board[i][j] == 0 && this.playerChoicable( j, i, this.next_player )){
             //this.next_choices.push( [ j, i ] );
             this.next_choices.push( [ i, j ] );
-            this.next_status.push( 0 );
           }
         }
       }
@@ -271,7 +267,7 @@ var reversi = class{
     console.log( '' );
     console.log( 'Choices:' );
     for( var i = 0; i < this.next_choices.length; i ++ ){
-      console.log( ' ' + i + ' : [ ' + this.next_choices[i][1] + ', ' + this.next_choices[i][0] + ' ] (' + this.next_status[i] + ')' );
+      console.log( ' ' + i + ' : [ ' + this.next_choices[i][1] + ', ' + this.next_choices[i][0] + ' ]' );
     }
 
     if( game_end ){

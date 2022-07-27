@@ -70,7 +70,7 @@ api.createReversi = async function( reversi ){
       conn = await pg.connect();
       if( conn ){
         try{
-          var sql = 'insert into reversi( id, parent_id, board_size, depth, choice_idx, choice_x, choice_y, board, next_choices, next_status, next_choices_num, next_processed_num, player0_count, player1_count, next_player, value, value_status, created, updated ) values ( $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19 )';
+          var sql = 'insert into reversi( id, parent_id, board_size, depth, choice_idx, choice_x, choice_y, board, next_choices, next_choices_num, next_processed_num, player0_count, player1_count, next_player, value, value_status, created, updated ) values ( $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18 )';
           if( !reversi.id ){
             reversi.id = uuidv4();
           }
@@ -85,7 +85,7 @@ api.createReversi = async function( reversi ){
             reversi.value_status = 0;
           }
           //console.log( reversi );
-          var query = { text: sql, values: [ reversi.id, reversi.parent_id, reversi.board_size, reversi.depth, reversi.choice_idx, reversi.choice[0], reversi.choice[1], JSON.stringify( reversi.board ), JSON.stringify( reversi.next_choices ), JSON.stringify( reversi.next_status ), reversi.next_choices_num, reversi.next_processed_num, reversi.player0_count, reversi.player1_count, reversi.next_player, reversi.value, reversi.value_status, reversi.created, reversi.updated ] };
+          var query = { text: sql, values: [ reversi.id, reversi.parent_id, reversi.board_size, reversi.depth, reversi.choice_idx, reversi.choice[0], reversi.choice[1], JSON.stringify( reversi.board ), JSON.stringify( reversi.next_choices ), reversi.next_choices_num, reversi.next_processed_num, reversi.player0_count, reversi.player1_count, reversi.next_player, reversi.value, reversi.value_status, reversi.created, reversi.updated ] };
           conn.query( query, function( err, result ){
             if( err ){
               console.log( err );
@@ -133,15 +133,15 @@ api.createReversis = function( reversis ){
               reversis[i].value_status = 0;
             }
 
-            params.push( [ reversis[i].id, reversis[i].parent_id, reversis[i].board_size, reversis[i].depth, reversis[i].choice_idx, reversis[i].choice[0], reversis[i].choice[1], JSON.stringify( reversis[i].board ), JSON.stringify( reversis[i].next_choices ), JSON.stringify( reversis[i].next_status ), reversis[i].next_choices_num, reversis[i].next_processed_num, reversis[i].player0_count, reversis[i].player1_count, reversis[i].next_player, reversis[i].value, reversis[i].value_status, reversis[i].created, reversis[i].updated ] );
+            params.push( [ reversis[i].id, reversis[i].parent_id, reversis[i].board_size, reversis[i].depth, reversis[i].choice_idx, reversis[i].choice[0], reversis[i].choice[1], JSON.stringify( reversis[i].board ), JSON.stringify( reversis[i].next_choices ), reversis[i].next_choices_num, reversis[i].next_processed_num, reversis[i].player0_count, reversis[i].player1_count, reversis[i].next_player, reversis[i].value, reversis[i].value_status, reversis[i].created, reversis[i].updated ] );
           }
 
-          var sql = format( 'insert into reversi( id, parent_id, board_size, depth, choice_idx, choice_x, choice_y, board, next_choices, next_status, next_choices_num, next_processed_num, player0_count, player1_count, next_player, value, value_status, created, updated ) values %L', params );
+          var sql = format( 'insert into reversi( id, parent_id, board_size, depth, choice_idx, choice_x, choice_y, board, next_choices, next_choices_num, next_processed_num, player0_count, player1_count, next_player, value, value_status, created, updated ) values %L', params );
           conn.query( sql, [], function( err, result ){
             if( err ){
               //. "error: syntax error at end of input" ??
               //. "error: duplicate key value violates unique constraint "reversi_pkey""" ??
-              //console.log( 'bulk insert', err );
+              console.log( 'bulk insert', err );
               resolve( { status: true, results: result } );
             }else{
               resolve( { status: true, results: result } );
@@ -185,9 +185,6 @@ api.readReversi = async function( reversi_id ){
                 }
                 if( typeof reversi.next_choices == 'string' ){
                   reversi.next_choices = JSON.parse( reversi.next_choices );
-                }
-                if( typeof reversi.next_status == 'string' ){
-                  reversi.next_status = JSON.parse( reversi.next_status );
                 }
                 reversi.next_choices_num = reversi.next_choices.length;
                 resolve( { status: true, result: reversi } );
@@ -301,15 +298,12 @@ api.startProcess = async function( board_size ){
                               //. 解析終了？
                               resolve( { status: true, result: null } );
                             }else{
-                              var reversi1 = result.rows[0];   //. board や next_choices, next_status などが文字列のまま
+                              var reversi1 = result.rows[0];   //. board や next_choices などが文字列のまま
                               if( typeof reversi1.board == 'string' ){
                                 reversi1.board = JSON.parse( reversi1.board );
                               }
                               if( typeof reversi1.next_choices == 'string' ){
                                 reversi1.next_choices = JSON.parse( reversi1.next_choices );
-                              }
-                              if( typeof reversi1.next_status == 'string' ){
-                                reversi1.next_status = JSON.parse( reversi1.next_status );
                               }
                               reversi1.next_choices_num = reversi1.next_choices.length;
                               resolve( { status: true, result: reversi1 } );
@@ -317,15 +311,12 @@ api.startProcess = async function( board_size ){
                           }
                         });
                       }else{
-                        var reversi1 = result.rows[0];   //. board や next_choices, next_status などが文字列のまま
+                        var reversi1 = result.rows[0];   //. board や next_choices などが文字列のまま
                         if( typeof reversi1.board == 'string' ){
                           reversi1.board = JSON.parse( reversi1.board );
                         }
                         if( typeof reversi1.next_choices == 'string' ){
                           reversi1.next_choices = JSON.parse( reversi1.next_choices );
-                        }
-                        if( typeof reversi1.next_status == 'string' ){
-                          reversi1.next_status = JSON.parse( reversi1.next_status );
                         }
                         reversi1.next_choices_num = reversi1.next_choices.length;
                         resolve( { status: true, result: reversi1 } );
@@ -394,12 +385,9 @@ api.nextProcess = async function( board_size ){
               }else{
                 var r0 = result.rows[0];   
                 var reversi0 = new Reversi( r0.id, r0.parent_id, r0.depth, r0.choice_idx, [ -1, -1 ], JSON.parse( r0.board ), r0.next_player );
-                if( typeof r0.next_status == 'string' ){
-                  reversi0.next_status = JSON.parse( r0.next_status );
-                }
                 reversi0.next_processed_num = r0.next_processed_num;
                 reversi0.changeStatus( -1 );
-                this.updateReversi( reversi0.id, reversi0.next_status, reversi0.next_processed_num ).then( function( result ){
+                this.updateReversi( reversi0.id, reversi0.next_processed_num ).then( function( result ){
                   if( result && result.status ){
                     //. この状態の reversi0 を返す
                     resolve( { status: true, result: reversi0 } );
@@ -445,12 +433,9 @@ api.updateProcess = async function( reversis ){
                     r0.board = JSON.parse( r0.board );
                   }
                   var reversi0 = new Reversi( r0.id, r0.parent_id, r0.depth, r0.choice_idx, [ -1, -1 ], r0.board, r0.next_player );
-                  if( typeof reversi0.next_status == 'string' ){
-                    reversi0.next_status = JSON.parse( r0.next_status );
-                  }
                   reversi0.next_processed_num = r0.next_processed_num;
                   reversi0.changeStatus( 1 );
-                  this.updateReversi( reversi0.id, reversi0.next_status, reversi0.next_processed_num ).then( function( result ){
+                  this.updateReversi( reversi0.id, reversi0.next_processed_num ).then( function( result ){
                     if( result && result.status ){
                       resolve( { status: true, results: reversis } );
                     }else{
@@ -485,7 +470,7 @@ api.updateProcess = async function( reversis ){
 };
 
 //. Update
-api.updateReversi = async function( reversi_id, reversi_next_status, reversi_next_processed_num ){
+api.updateReversi = async function( reversi_id, reversi_next_processed_num ){
   return new Promise( async ( resolve, reject ) => {
     if( pg ){
       conn = await pg.connect();
@@ -494,9 +479,9 @@ api.updateReversi = async function( reversi_id, reversi_next_status, reversi_nex
           resolve( { status: false, error: 'no id.' } );
         }else{
           try{
-            var sql = 'update reversi set next_status = $1, next_processed_num = $2, updated = $3 where id = $4';
+            var sql = 'update reversi set next_processed_num = $1, updated = $2 where id = $3';
             var t = ( new Date() ).getTime();
-            var query = { text: sql, values: [ JSON.stringify( reversi_next_status ), reversi_next_processed_num, t, reversi_id ] };
+            var query = { text: sql, values: [ reversi_next_processed_num, t, reversi_id ] };
             conn.query( query, function( err, result ){
               if( err ){
                 console.log( err );
@@ -615,15 +600,12 @@ api.readRoot = async function( board_size ){
                   if( result.rows.length == 0 ){
                     resolve( { status: false, error: 'no root info found for board_size = ' + board_size + '.' } );
                   }else{
-                    var reversi0 = result.rows[0];   //. board や next_choices, next_status などが文字列のまま
+                    var reversi0 = result.rows[0];   //. board や next_choices などが文字列のまま
                     if( typeof reversi0.board == 'string' ){
                       reversi0.board = JSON.parse( reversi0.board );
                     }
                     if( typeof reversi0.next_choices == 'string' ){
                       reversi0.next_choices = JSON.parse( reversi0.next_choices );
-                    }
-                    if( typeof reversi0.next_status == 'string' ){
-                      reversi0.next_status = JSON.parse( reversi0.next_status );
                     }
                     reversi0.next_choices_num = reversi0.next_choices.length;
                     resolve( { status: true, result: reversi0 } );
@@ -672,15 +654,12 @@ api.readInfo = async function( parent_id, choice_idx ){
                   if( result.rows.length == 0 ){
                     resolve( { status: false, error: 'no info found for parent_id = ' + parent_id + ' and choice_idx = ' + choice_idx + '.' } );
                   }else{
-                    var reversi0 = result.rows[0];   //. board や next_choices, next_status などが文字列のまま
+                    var reversi0 = result.rows[0];   //. board や next_choices などが文字列のまま
                     if( typeof reversi0.board == 'string' ){
                       reversi0.board = JSON.parse( reversi0.board );
                     }
                     if( typeof reversi0.next_choices == 'string' ){
                       reversi0.next_choices = JSON.parse( reversi0.next_choices );
-                    }
-                    if( typeof reversi0.next_status == 'string' ){
-                      reversi0.next_status = JSON.parse( reversi0.next_status );
                     }
                     reversi0.next_choices_num = reversi0.next_choices.length;
                     resolve( { status: true, result: reversi0 } );
@@ -730,15 +709,12 @@ api.readInfoById = async function( id ){
                   if( result.rows.length == 0 ){
                     resolve( { status: false, error: 'no info found for id = ' + id + '.' } );
                   }else{
-                    var reversi0 = result.rows[0];   //. board や next_choices, next_status などが文字列のまま
+                    var reversi0 = result.rows[0];   //. board や next_choices などが文字列のまま
                     if( typeof reversi0.board == 'string' ){
                       reversi0.board = JSON.parse( reversi0.board );
                     }
                     if( typeof reversi0.next_choices == 'string' ){
                       reversi0.next_choices = JSON.parse( reversi0.next_choices );
-                    }
-                    if( typeof reversi0.next_status == 'string' ){
-                      reversi0.next_status = JSON.parse( reversi0.next_status );
                     }
                     reversi0.next_choices_num = reversi0.next_choices.length;
                     resolve( { status: true, result: reversi0 } );
@@ -801,7 +777,6 @@ api.post( '/reversi/update_process', async function( req, res ){
     reversis[i].choice[1] = parseInt( reversis[i].choice[1] );
     reversis[i].board = JSON.parse( JSON.stringify( reversis[i].board ).split( '"' ).join( '' ) );
     reversis[i].next_choices = JSON.parse( JSON.stringify( reversis[i].next_choices ).split( '"' ).join( '' ) );
-    reversis[i].next_status = JSON.parse( JSON.stringify( reversis[i].next_status ).split( '"' ).join( '' ) );
     reversis[i].next_choices_num = parseInt( reversis[i].next_choices_num );
     reversis[i].next_processed_num = parseInt( reversis[i].next_processed_num );
     reversis[i].player0_count = parseInt( reversis[i].player0_count );
@@ -885,7 +860,7 @@ api.put( '/reversi/:id', async function( req, res ){
 
   var reversi_id = req.params.id;
   var reversi = req.body;
-  api.updateReversi( reversi_id, reversi.next_status, reversi.next_processed_num ).then( function( result ){
+  api.updateReversi( reversi_id, reversi.next_processed_num ).then( function( result ){
     res.status( result.status ? 200 : 400 );
     res.write( JSON.stringify( result, null, 2 ) );
     res.end();

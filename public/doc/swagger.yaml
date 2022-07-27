@@ -168,9 +168,6 @@ definitions:
         next_choices:
           type: string
           description: 次手候補
-        next_status:
-          type: string
-          description: 次手解析済み情報
         next_choices_num:
           type: integer
           description: next_choices の配列サイズ
