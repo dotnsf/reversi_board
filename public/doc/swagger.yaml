@@ -143,47 +143,46 @@ definitions:
         type: integer
         description: サイズ(4, 6, or 8)
   UpdateRequest:
-    type: object
-    properties:
-      reversi:
-        type: object
-        properties:
-          id:
-            type: string
-            description: ID
-          parent_id:
-            type: string
-            description: 親 ID
-          board_size:
-            type: integer
-            description: サイズ（4, 6, or 8）
-          choice_idx:
-            type: integer
-            description: 選択インデックス
-          choice:
-            type: array
-            description: 選択インデックス
-          board:
-            type: string
-            description: ボード情報
-          next_choices:
-            type: string
-            description: 次手候補
-          next_status:
-            type: string
-            description: 次手解析済み情報
-          next_choices_num:
-            type: integer
-            description: next_choices の配列サイズ
-          next_processed_num:
-            type: integer
-            description: next_status 配列の解析済みサイズ
-          player0_count:
-            type: integer
-            description: 先手番のコマ数
-          player1_count:
-            type: integer
-            description: 後手番のコマ数
-          next_player:
-            type: integer
-            description: 次に選択するプレイヤー(1:先手、-1:後手)
+    type: array
+    items:
+      type: object
+      properties:
+        id:
+          type: string
+          description: ID
+        parent_id:
+          type: string
+          description: 親 ID
+        board_size:
+          type: integer
+          description: サイズ（4, 6, or 8）
+        choice_idx:
+          type: integer
+          description: 選択インデックス
+        choice:
+          type: array
+          description: 選択インデックス
+        board:
+           type: string
+           description: ボード情報
+        next_choices:
+          type: string
+          description: 次手候補
+        next_status:
+          type: string
+          description: 次手解析済み情報
+        next_choices_num:
+          type: integer
+          description: next_choices の配列サイズ
+        next_processed_num:
+          type: integer
+          description: next_status 配列の解析済みサイズ
+        player0_count:
+          type: integer
+          description: 先手番のコマ数
+        player1_count:
+          type: integer
+          description: 後手番のコマ数
+        next_player:
+          type: integer
+          description: 次に選択するプレイヤー(1:先手、-1:後手)

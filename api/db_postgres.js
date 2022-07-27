@@ -1,6 +1,7 @@
 //. db_postgres.js
 var express = require( 'express' ),
     bodyParser = require( 'body-parser' ),
+    format = require( 'pg-format' ),
     fs = require( 'fs' ),
     { v4: uuidv4 } = require( 'uuid' ),
 
@@ -116,33 +117,36 @@ api.createReversis = function( reversis ){
       conn = await pg.connect();
       if( conn ){
         try{
-          var num = 0;
-          var count = 0;
-
-          var sql = 'insert into quizs( id, data, num, length, created, updated ) values ( $1, $2, $3, $4, $5, $6 )';
-          for( var i = 0; i < quizs.length; i ++ ){
-            var quiz = quizs[i];
-            if( !quiz.id ){
-              quiz.id = uuidv4();
+          var params = [];
+          for( var i = 0; i < reversis.length; i ++ ){
+            if( !reversis[i].id ){
+              reversis[i].id = uuidv4();
             }
             var t = ( new Date() ).getTime();
-            quiz.created = t;
-            quiz.updated = t;
-            //console.log( quiz );
-            var query = { text: sql, values: [ quiz.id, quiz.data, quiz.num, quiz.length, quiz.created, quiz.updated ] };
-            conn.query( query, function( err, result ){
-              num ++;
-              if( err ){
-                console.log( err );
-              }else{
-                count ++;
-              }
+            reversis[i].created = t;
+            reversis[i].updated = t;
+            if( reversis[i].next_choices_num == 0 ){
+              reversis[i].value = reversis[i].player0_count - reversis[i].player1_count;
+              reversis[i].value_status = 1;
+            }else{
+              reversis[i].value = null;
+              reversis[i].value_status = 0;
+            }
 
-              if( num == quizs.length ){
-                resolve( { status: true, count: count } );
-              }
-            });
+            params.push( [ reversis[i].id, reversis[i].parent_id, reversis[i].board_size, reversis[i].depth, reversis[i].choice_idx, reversis[i].choice[0], reversis[i].choice[1], JSON.stringify( reversis[i].board ), JSON.stringify( reversis[i].next_choices ), JSON.stringify( reversis[i].next_status ), reversis[i].next_choices_num, reversis[i].next_processed_num, reversis[i].player0_count, reversis[i].player1_count, reversis[i].next_player, reversis[i].value, reversis[i].value_status, reversis[i].created, reversis[i].updated ] );
           }
+
+          var sql = format( 'insert into reversi( id, parent_id, board_size, depth, choice_idx, choice_x, choice_y, board, next_choices, next_status, next_choices_num, next_processed_num, player0_count, player1_count, next_player, value, value_status, created, updated ) values %L', params );
+          conn.query( sql, [], function( err, result ){
+            if( err ){
+              //. "error: syntax error at end of input" ??
+              //. "error: duplicate key value violates unique constraint "reversi_pkey""" ??
+              //console.log( 'bulk insert', err );
+              resolve( { status: true, results: result } );
+            }else{
+              resolve( { status: true, results: result } );
+            }
+          });
         }catch( e ){
           console.log( e );
           resolve( { status: false, error: err } );
@@ -353,61 +357,37 @@ api.startProcess = async function( board_size ){
 
 api.nextProcess = async function( board_size ){
   //. startProcess はおそらく問題なし
-  //. nextProcess を実行しても DB 内データに（next_status は "[0,0,0,0]" から "[-1,0,0,0]" に変化しているべきなのに）変化なし
-  //. （DB 内データは next_choices = "[[2,0],[3,1],[0,2],[1,3]]", next_status="[-1,0,0,0]", next_choices_num=4 になっているべきなのに）UI 上では next_choices = [],  next_status = [-1], next_choices_num = 0 になっている
   return new Promise( async ( resolve, reject ) => {
     if( pg ){
       conn = await pg.connect();
       if( conn ){
         try{
-          //. 特定の board_size 値を持っているレコードの中で、 ( next_choices_num > 0 && next_choices_num > next_processed_num ) を満たしているレコードが、、、
-          //. 0 件の場合（新しい子レコードを「どこかのレコードの下に」作成する必要がある）、
-          //.   ( next_choices_num > 0 && next_processed_num == 0 ) のレコードを depth, choice_idx の昇順に並べた最初のレコードで 0 番目の戦略を新規に子レコードとして作成する
-          //. 1 件以上の場合（おそらく 1 件）、
-          //.   その中から先頭の１件を取り出して、next_processed_num 番目の戦略を新規に子レコードとして作成する
-
-          //. start_process 直後の初期 reversi が next_choices_num = null となってしまっていて、現在のアルゴリズムだと「解析終了」と判断されてしまう？？
-          //. next_choices_num が初期値のまま作成されて計算されていない？
-          var sql = "select * from reversi where board_size = $1 and next_choices_num > 0 and next_choices_num > next_processed_num order by depth, choice_idx";
-          var query = { text: sql, values: [ board_size ] };
+          //. 特定の board_size 値を持っているレコードの中で、 ( next_processed_num = 0 || ( next_processed_num = -1 && updated + 60000 < t ) を満たしているレコードを探す
+          //. order by depth, updated で最初の１件が欲しい
+          var t = ( new Date() ).getTime();
+          var sql = "select * from reversi where board_size = $1 and next_choices_num > 0 and ( next_processed_num = 0 or ( next_processed_num = -1 and updated + 60000 < $2 ) ) order by depth, updated limit 1";
+          var query = { text: sql, values: [ board_size, t ] };
           conn.query( query, ( err, result ) => {
             if( err ){
               console.log( err );
               resolve( { status: false, error: err } );
             }else{
               if( result.rows.length == 0 ){
-                sql = "select * from reversi where board_size = $1 and next_choices_num > 0 and next_processed_num = 0 order by depth, choice_idx";
+                //. 最初の１件ができていない？　または処理終了？
+                sql = "select * from reversi where board_size = $1 limit 1";
                 query = { text: sql, values: [ board_size ] };
-                conn.query( query, ( err, result ) => {
+                conn.query( query, async ( err, result ) => {
                   if( err ){
                     console.log( err );
                     resolve( { status: false, error: err } );
                   }else{
                     if( result.rows.length == 0 ){
+                      //. 最初の１件ができていない
+                      var r = await this.startProcess( board_size );
+                      resolve( r );
+                    }else{
                       //. 解析終了？
                       resolve( { status: true, result: null } );
-                    }else{
-                      var r0 = result.rows[0];   
-                      var reversi0 = new Reversi( r0.id, r0.parent_id, r0.depth, r0.choice_idx, [ -1, -1 ], JSON.parse( r0.board ), r0.next_player );
-                      if( typeof reversi0.next_status == 'string' ){
-                        reversi0.next_status = JSON.parse( r0.next_status );
-                      }
-                      reversi0.next_processed_num = r0.next_processed_num;
-                      reversi0.changeStatus( 0, -1 );
-                      this.updateReversi( reversi0.id, reversi0.next_status, reversi0.next_processed_num ).then( function( result ){
-                        if( result && result.status ){
-                          //. 0 番目の選択はクライアント側で処理してもらうので、この状態の reversi0 を返す
-                          resolve( { status: true, result: reversi0 } );
-
-                          //. 0 番目の戦略を選択する
-                          //var reversi1 = new Reversi( null, r0.id, r0.depth + 1, 0, r0.next_choices[0], r0.board, r0.next_player * -1 );
-                          //. save( reversi1 );
-                          //reversi0.changeStatus( 0, 1 );
-                          //. save( reversi0 );
-                        }else{
-                          resolve( { status: false, error: 'update reversi0 failed.' } );
-                        }
-                      });
                     }
                   }
                 });
@@ -418,10 +398,10 @@ api.nextProcess = async function( board_size ){
                   reversi0.next_status = JSON.parse( r0.next_status );
                 }
                 reversi0.next_processed_num = r0.next_processed_num;
-                reversi0.changeStatus( r0.next_processed_num, -1 );
+                reversi0.changeStatus( -1 );
                 this.updateReversi( reversi0.id, reversi0.next_status, reversi0.next_processed_num ).then( function( result ){
                   if( result && result.status ){
-                    //. next_processed_num 番目の選択はクライアント側で処理してもらうので、この状態の reversi0 を返す
+                    //. この状態の reversi0 を返す
                     resolve( { status: true, result: reversi0 } );
                   }else{
                     resolve( { status: false, error: 'update reversi0 failed.' } );
@@ -447,17 +427,16 @@ api.nextProcess = async function( board_size ){
   });
 };
 
-api.updateProcess = async function( reversi1 ){
+api.updateProcess = async function( reversis ){
   return new Promise( async ( resolve, reject ) => {
     if( pg ){
       conn = await pg.connect();
       if( conn ){
         try{
-          this.createReversi( reversi1 ).then( async ( result ) => {
+          this.createReversis( reversis ).then( async ( result ) => {
             if( result && result.status ){
               //. 最後に親レコードのステータスを更新する
-              var id = reversi1.parent_id;
-              var choice_idx = reversi1.choice_idx;
+              var id = reversis[0].parent_id;
               if( id ){
                 var r = await this.readReversi( id );
                 if( r && r.status ){
@@ -470,10 +449,10 @@ api.updateProcess = async function( reversi1 ){
                     reversi0.next_status = JSON.parse( r0.next_status );
                   }
                   reversi0.next_processed_num = r0.next_processed_num;
-                  reversi0.changeStatus( choice_idx, 1 );
+                  reversi0.changeStatus( 1 );
                   this.updateReversi( reversi0.id, reversi0.next_status, reversi0.next_processed_num ).then( function( result ){
                     if( result && result.status ){
-                      resolve( { status: true, result: reversi1 } );
+                      resolve( { status: true, results: reversis } );
                     }else{
                       resolve( { status: false, error: 'update reversi0 failed.' } );
                     }
@@ -485,46 +464,7 @@ api.updateProcess = async function( reversi1 ){
                 resolve( { status: false, error: 'no parent.' } );
               }
             }else{
-              resolve( { status: false, error: 'create reversi1 failed.' } );
-            }
-          });
-        }catch( e ){
-          console.log( e );
-          resolve( { status: false, error: err } );
-        }finally{
-          if( conn ){
-            conn.release();
-          }
-        }
-      }else{
-        resolve( { status: false, error: 'no connection.' } );
-      }
-    }else{
-      resolve( { status: false, error: 'db not ready.' } );
-    }
-  });
-};
-
-api.queryQuizs = async function( key, limit, offset ){
-  return new Promise( async ( resolve, reject ) => {
-    if( pg ){
-      conn = await pg.connect();
-      if( conn ){
-        try{
-          var sql = "select * from quizs where data like '%" + key + "%' order by updated";
-          if( limit ){
-            sql += " limit " + limit;
-          }
-          if( offset ){
-            sql += " start " + offset;
-          }
-          var query = { text: sql, values: [] };
-          conn.query( query, function( err, result ){
-            if( err ){
-              console.log( err );
-              resolve( { status: false, error: err } );
-            }else{
-              resolve( { status: true, results: result.rows } );
+              resolve( { status: false, error: 'create reversis failed.' } );
             }
           });
         }catch( e ){
@@ -852,22 +792,24 @@ api.post( '/reversi/next_process', async function( req, res ){
 api.post( '/reversi/update_process', async function( req, res ){
   res.contentType( 'application/json; charset=utf-8' );
 
-  var reversi = req.body.reversi;
-  reversi.board_size = parseInt( reversi.board_size );
-  reversi.depth = parseInt( reversi.depth );
-  reversi.choice_idx = parseInt( reversi.choice_idx );
-  reversi.choice[0] = parseInt( reversi.choice[0] );
-  reversi.choice[1] = parseInt( reversi.choice[1] );
-  reversi.board = JSON.parse( JSON.stringify( reversi.board ).split( '"' ).join( '' ) );
-  reversi.next_choices = JSON.parse( JSON.stringify( reversi.next_choices ).split( '"' ).join( '' ) );
-  reversi.next_status = JSON.parse( JSON.stringify( reversi.next_status ).split( '"' ).join( '' ) );
-  reversi.next_choices_num = parseInt( reversi.next_choices_num );
-  reversi.next_processed_num = parseInt( reversi.next_processed_num );
-  reversi.player0_count = parseInt( reversi.player0_count );
-  reversi.player1_count = parseInt( reversi.player1_count );
-  reversi.next_player = parseInt( reversi.next_player );
+  var reversis = req.body;
+  for( var i = 0; i < reversis.length; i ++ ){
+    reversis[i].board_size = parseInt( reversis[i].board_size );
+    reversis[i].depth = parseInt( reversis[i].depth );
+    reversis[i].choice_idx = parseInt( reversis[i].choice_idx );
+    reversis[i].choice[0] = parseInt( reversis[i].choice[0] );
+    reversis[i].choice[1] = parseInt( reversis[i].choice[1] );
+    reversis[i].board = JSON.parse( JSON.stringify( reversis[i].board ).split( '"' ).join( '' ) );
+    reversis[i].next_choices = JSON.parse( JSON.stringify( reversis[i].next_choices ).split( '"' ).join( '' ) );
+    reversis[i].next_status = JSON.parse( JSON.stringify( reversis[i].next_status ).split( '"' ).join( '' ) );
+    reversis[i].next_choices_num = parseInt( reversis[i].next_choices_num );
+    reversis[i].next_processed_num = parseInt( reversis[i].next_processed_num );
+    reversis[i].player0_count = parseInt( reversis[i].player0_count );
+    reversis[i].player1_count = parseInt( reversis[i].player1_count );
+    reversis[i].next_player = parseInt( reversis[i].next_player );
+  };
 
-  api.updateProcess( reversi ).then( function( result ){
+  api.updateProcess( reversis ).then( function( result ){
     res.status( result.status ? 200 : 400 );
     res.write( JSON.stringify( result, null, 2 ) );
     res.end();

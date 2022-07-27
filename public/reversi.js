@@ -11,7 +11,7 @@ var reversi = class{
     this.next_choices = [];  //. [ [ 2, 3 ], .. ]
     this.next_status = [];
     this.next_choices_num = 0;
-    this.next_processed_num = 0;
+    this.next_processed_num = 0;  //. ここで処理済／未済を判断する
     this.player0_count = 0;
     this.player1_count = 0;
     this.next_player = player;
@@ -226,13 +226,9 @@ var reversi = class{
     }
   };
 
-  changeStatus( idx, new_status ){
+  changeStatus( new_status ){
     //. new_status: 0=未処理, -1=処理中, 1=処理済み
-    this.next_status[idx] = new_status;
-
-    if( new_status == 1 ){
-      this.next_processed_num ++;
-    }
+    this.next_processed_num = new_status;
   }
 
   showBoard( game_end ){

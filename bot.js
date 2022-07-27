@@ -64,37 +64,30 @@ async function nextProcess(){
       }else{
         if( body0 && body0.status ){
           var r0 = body0.result;
-          if( r0.next_status && r0.next_status.length ){
-            var idx = -1;
-            for( var i = 0; i < r0.next_status.length && idx == -1; i ++ ){
-              if( r0.next_status[i] == -1 ){
-                idx = i;
+          if( r0.next_processed_num == -1 ){
+            var reversis = [];
+            for( var i = 0; i < r0.next_choices.length; i ++ ){
+              var choice = r0.next_choices[i];
+              var reversi1 = new reversi( null, r0.id, r0.depth + 1, i, choice, JSON.parse( JSON.stringify( r0.board ) ), r0.next_player );
+              reversis.push( reversi1 );
+            }
+
+            var url1 = BASE_URL + '/api/reversi/update_process';
+            var options1 = { 
+              url: url1, 
+              method: 'POST',
+              headers: { accept: 'application/json' },
+              json: reversis
+            };
+            request( options1, function( err1, res1, body1 ){
+              if( err1 ){
+                resolve( { status: false, error: err1 } );
+              }else{
+                resolve( { status: true, result: body1 } );
               }
-            }
-
-            if( idx > -1 ){
-              var choice = r0.next_choices[idx];
-              var reversi1 = new reversi( null, r0.id, r0.depth + 1, idx, choice, r0.board, r0.next_player );
-
-              var url1 = BASE_URL + '/api/reversi/update_process';
-              var options1 = { 
-                url: url1, 
-                method: 'POST',
-                headers: { accept: 'application/json' },
-                json: { reversi: reversi1 }
-              };
-              request( options1, function( err1, res1, body1 ){
-                if( err1 ){
-                  resolve( { status: false, error: err1 } );
-                }else{
-                  resolve( { status: true, result: body1 } );
-                }
-              });
-            }else{
-              resolve( { status: false, error: 'no target found.' } );
-            }
+            });
           }else{
-            resolve( { status: true, result: null } );
+            resolve( { status: false, error: 'no target found.' } );
           }
         }else{
           resolve( { status: false, error: body0.error } );
