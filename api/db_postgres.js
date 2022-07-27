@@ -140,6 +140,7 @@ api.createReversis = function( reversis ){
           conn.query( sql, [], function( err, result ){
             if( err ){
               //. "error: duplicate key value violates unique constraint "reversi_pkey""" ??
+              //. ↑これが発生しても１分後に再処理するので気にしなくていい？
               console.log( 'bulk insert', err );
               resolve( { status: true, results: result } );
             }else{
@@ -377,6 +378,7 @@ api.nextProcess = async function( board_size ){
                       resolve( r );
                     }else{
                       //. 解析終了？
+                      //. だと思うが、next_processed_num = -1 のままのケースが考えられる。１分後に再処理すべき？
                       resolve( { status: true, result: null } );
                     }
                   }
