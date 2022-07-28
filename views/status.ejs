@@ -105,8 +105,69 @@ function getInfo( parent_id, choice_idx ){
       //obj.remove();
       console.log( e0, e1, e2 );
 
-      //. まだ解析できていないなら、解析してもらうのもいいかも
+      //. まだ解析できていないなら、解析してもらうのもいいかも。。が、この１選択手だけ進めることはできない
       if( confirm( 'この場で解析を進めますか（よく分からない場合は「いいえ」を選んでください）？' ) ){
+        //. bot.js L.67 付近のコードを移植して子を作成してから choice_idx を選ぶ必要あり
+        var reversis = [];
+        for( var i = 0; i < current_info.next_choices.length; i ++ ){
+          var choice = current_info.next_choices[i];
+          var reversi1 = new reversi( null, current_info.id, current_info.depth + 1, i, choice, JSON.parse( JSON.stringify( current_info.board ) ), current_info.next_player );
+          reversis.push( reversi1 );
+        }
+
+        $.ajax({
+          url: '/api/reversi/update_process',
+          type: 'POST',
+          data: reversis,
+          success: function( result ){
+            if( result.status ){
+              $.ajax({
+                url: '/api/reversi/' + current_info.id,
+                type: 'PUT',
+                data: { next_processed_num: 1 },
+                success: function( result ){
+                  //. 再挑戦
+                  $.ajax({
+                    url: '/api/infobyparentandchoice?parent_id=' + parent_id + '&choice_idx=' + choice_idx,
+                    type: 'GET',
+                    success: function( result ){
+                      obj.remove();
+                      if( result.status ){
+                        if( result.result ){
+                          render_info( result.result );
+                        }else{
+                          alert( JSON.stringify( result.error ) );
+                          console.log( 'GET /api/infobyparentandchoice failed.' );
+                        }
+                      }else{
+                        alert( JSON.stringify( result.error ) );
+                      }
+                    },
+                    error: function( e0, e1, e2 ){
+                      obj.remove();
+                      console.log( e0, e1, e2 );
+                      alert( '解析エラー、まだその手番の解析が不充分な可能性があります。' );
+                    }
+                  });
+                },
+                error: function( e0, e1, e2 ){
+                  obj.remove();
+                  console.log( e0, e1, e2 );
+                  alert( '解析エラー、まだその手番の解析が不充分な可能性があります。' );
+                }
+              });
+            }else{
+              obj.remove();
+              alert( JSON.stringify( result.error ) );
+            }
+          },
+          error: function( e0, e1, e2 ){
+            obj.remove();
+            console.log( e0, e1, e2 );
+            alert( '解析エラー、まだその手番の解析が不充分な可能性があります。' );
+          }
+        });
+
         var choice = current_info.next_choices[choice_idx];
         var reversi1 = new reversi( null, current_info.id, current_info.depth + 1, choice_idx, choice, JSON.parse( JSON.stringify( current_info.board ) ), current_info.next_player );
         $.ajax({

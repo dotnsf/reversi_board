@@ -82,10 +82,6 @@ var reversi = class{
         var c = 2;
         var z = false;
         while( c > 1 && ( x - c ) >= 0  && !z){
-          /* K.Kimura ここのロジックがおかしい
-          ( board[y][x-d] == player ) となる d > 2 が存在していて、
-          かつ全ての 1 < c < d に対して ( board[y][x-c] == other ) が存在する時に for ループを実行するべき
-          */
           if( board[y][x-c] == 0 ){
             z = true;
           }else if( board[y][x-c] == player ){
@@ -215,6 +211,7 @@ var reversi = class{
       if( this.next_choices_num == 0 ){
         //. 次の手は自分もパスしかない = ゲーム終了
         this.next_player = 0;
+        this.next_processed_num = 1; //. #16
         this.showBoard( true );
       }
     }else{
