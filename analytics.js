@@ -81,8 +81,9 @@ async function getTargetRecords( board_size ){
       conn = await pg.connect();
       if( conn ){
         try{
-          var sql = "select id, parent_id, depth, choice_idx, player0_count, player1_count, value, value_status, next_player from reversi where board_size = $1 and depth = ( select max(depth) from reversi where value_status = 0 ) and value_status = 0 order by parent_id, choice_idx limit 1";
-          var query = { text: sql, values: [ board_size ] };
+          var t = ( new Date() ).getTime();
+          var sql = "select id, parent_id, depth, choice_idx, player0_count, player1_count, value, value_status, next_player from reversi where board_size = $1 and depth = ( select max(depth) from reversi where ( value_status = 0 or ( value_status = -1 and updated + 60000 < $2 ) ) ) and ( value_status = 0 or ( value_status = -1 and updated + 60000 < $3 ) ) order by parent_id, choice_idx limit 1";
+          var query = { text: sql, values: [ board_size, t, t ] };
           conn.query( query, function( err, result0 ){
             if( err ){
               console.log( err );
