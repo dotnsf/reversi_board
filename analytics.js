@@ -81,7 +81,7 @@ async function getTargetRecords( board_size ){
       conn = await pg.connect();
       if( conn ){
         try{
-          var sql = "select id, parent_id, depth, choice_idx, player0_count, player1_count, value, value_status, next_player from reversi where board_size = $1 and depth = ( select max(depth) from reversi where value_status = 0 ) limit 1 order by parent_id, choice_idx";
+          var sql = "select id, parent_id, depth, choice_idx, player0_count, player1_count, value, value_status, next_player from reversi where board_size = $1 and depth = ( select max(depth) from reversi where value_status = 0 ) and value_status = 0 order by parent_id, choice_idx limit 1";
           var query = { text: sql, values: [ board_size ] };
           conn.query( query, function( err, result0 ){
             if( err ){
@@ -105,19 +105,19 @@ async function getTargetRecords( board_size ){
                 }else{
                   sql = "select id, parent_id, depth, choice_idx, player0_count, player1_count, value, value_status, next_player from reversi where parent_id = $1 order by choice_idx";
                   query = { text: sql, values: [ result0.rows[0].id ] };
-                  conn.query( query, function( err, result1 ){
-                    if( err ){
-                      console.log( err );
+                  conn.query( query, function( err1, result1 ){
+                    if( err1 ){
+                      console.log( err1 );
 
-                      sql = "update reversi set value_status = 0, updated = $1 where id = $2";
+                      sql = "update reversi set value_status = 1, updated = $1 where id = $2";
                       t = ( new Date() ).getTime();
                       query = { text: sql, values: [ t, result0.rows[0].id ] };
-                      conn.query( query, function( err0, result1 ){
-                        if( err0 ){
-                          console.log( err0 );
-                          resolve( { status: false, error: err0 } );
+                      conn.query( query, function( err2, result2 ){
+                        if( err2 ){
+                          console.log( err2 );
+                          resolve( { status: false, error: err2 } );
                         }else{
-                          resolve( { status: false, error: err } );
+                          resolve( { status: false, error: err1 } );
                         }
                       });
                     }else{
@@ -202,7 +202,8 @@ async function processOneRecord( board_size ){
       r = await updateValue( parent.id, parent.value );
       r.reversi = parent;
       r.finished = ( parent.depth == 0 );
-
+      
+      console.log( { r } );
       resolve( r );
     }else{
       resolve( { status: false, error: r.error } );

@@ -262,7 +262,7 @@ api.startProcess = async function( board_size ){
         if( conn ){
           try{
             //. 指定サイズのデータが存在していないことを確認してから作成する
-            var sql = "select * from reversi where board_size = " + board_size + " order by depth, choice_idx";
+            var sql = "select * from reversi where board_size = " + board_size + " order by depth";
             var query = { text: sql, values: [] };
             conn.query( query, ( err, result ) => {
               if( err ){
@@ -273,56 +273,13 @@ api.startProcess = async function( board_size ){
                   //console.log( { reversi1 } );
                   this.createReversi( reversi1 ).then( async function( result ){
                     if( result && result.status ){
-                      resolve( { status: true, result: reversi1 } );
+                      resolve( { status: true, created: true } );
                     }else{
                       resolve( { status: false, error: 'create reversi0 failed.' } );
                     }
                   });
                 }else{
-                  sql = "select * from reversi where board_size = $1 and next_choices_num > 0 and next_choices_num > next_processed_num order by depth, choice_idx";
-                  query = { text: sql, values: [ board_size ] };
-                  conn.query( query, ( err, result ) => {
-                    if( err ){
-                      console.log( err );
-                      resolve( { status: false, error: err } );
-                    }else{
-                      if( result.rows.length == 0 ){
-                        sql = "select * from reversi where board_size = $1 and next_choices_num > 0 and next_processed_num = 0 order by depth, choice_idx";
-                        query = { text: sql, values: [ board_size ] };
-                        conn.query( query, ( err, result ) => {
-                          if( err ){
-                            console.log( err );
-                            resolve( { status: false, error: err } );
-                          }else{
-                            if( result.rows.length == 0 ){
-                              //. 解析終了？
-                              resolve( { status: true, result: null } );
-                            }else{
-                              var reversi1 = result.rows[0];   //. board や next_choices などが文字列のまま
-                              if( typeof reversi1.board == 'string' ){
-                                reversi1.board = JSON.parse( reversi1.board );
-                              }
-                              if( typeof reversi1.next_choices == 'string' ){
-                                reversi1.next_choices = JSON.parse( reversi1.next_choices );
-                              }
-                              reversi1.next_choices_num = reversi1.next_choices.length;
-                              resolve( { status: true, result: reversi1 } );
-                            }
-                          }
-                        });
-                      }else{
-                        var reversi1 = result.rows[0];   //. board や next_choices などが文字列のまま
-                        if( typeof reversi1.board == 'string' ){
-                          reversi1.board = JSON.parse( reversi1.board );
-                        }
-                        if( typeof reversi1.next_choices == 'string' ){
-                          reversi1.next_choices = JSON.parse( reversi1.next_choices );
-                        }
-                        reversi1.next_choices_num = reversi1.next_choices.length;
-                        resolve( { status: true, result: reversi1 } );
-                      }
-                    }
-                  });
+                  resolve( { status: true, created: false } );
                 }
               }
             });
@@ -353,32 +310,32 @@ api.nextProcess = async function( board_size ){
       conn = await pg.connect();
       if( conn ){
         try{
-          //. 特定の board_size 値を持っているレコードの中で、 ( next_processed_num = 0 || ( next_processed_num = -1 && updated + 60000 < t ) を満たしているレコードを探す
-          //. order by depth, updated で最初の１件が欲しい
-          var t = ( new Date() ).getTime();
-          var sql = "select * from reversi where board_size = $1 and next_choices_num > 0 and ( next_processed_num = 0 or ( next_processed_num = -1 and updated + 60000 < $2 ) ) order by depth, updated limit 1";
-          var query = { text: sql, values: [ board_size, t ] };
+          //. #14
+          var sql = "select * from reversi where board_size = $1 and next_processed_num < 1 limit 1";
+          var query = { text: sql, values: [ board_size ] };
           conn.query( query, ( err, result ) => {
             if( err ){
               console.log( err );
               resolve( { status: false, error: err } );
             }else{
               if( result.rows.length == 0 ){
-                //. 最初の１件ができていない？　または処理終了？
-                sql = "select * from reversi where board_size = $1 limit 1";
-                query = { text: sql, values: [ board_size ] };
-                conn.query( query, async ( err, result ) => {
+                //. analytics.js
+                resolve( { status: false, error: 'no data prepared yet.' } );
+              }else{
+                //. bot.js
+                //. 特定の board_size 値を持っているレコードの中で、 ( next_processed_num = 0 || ( next_processed_num = -1 && updated + 60000 < t ) を満たしているレコードを探す
+                //. order by depth, updated で最初の１件が欲しい
+                var t = ( new Date() ).getTime();
+                var sql = "select * from reversi where board_size = $1 and next_choices_num > 0 and ( next_processed_num = 0 or ( next_processed_num = -1 and updated + 60000 < $2 ) ) order by depth, updated limit 1";
+                var query = { text: sql, values: [ board_size, t ] };
+                conn.query( query, ( err, result ) => {
                   if( err ){
                     console.log( err );
                     resolve( { status: false, error: err } );
                   }else{
                     if( result.rows.length == 0 ){
-                      //. 最初の１件ができていない
-                      var r = await this.startProcess( board_size );
-                      resolve( r );
-                    }else{
-                      //. 解析終了、だと思うが、next_processed_num = -1 のままのケースが考えられる。１分後に再処理すべき？
-                      sql = "select * from reversi where board_size = $1 and next_choices_num > 0 and next_processed_num = -1 order by depth, updated limit 1";
+                      //. 最初の１件ができていない？　または処理終了？
+                      sql = "select * from reversi where board_size = $1 limit 1";
                       query = { text: sql, values: [ board_size ] };
                       conn.query( query, async ( err, result ) => {
                         if( err ){
@@ -386,39 +343,56 @@ api.nextProcess = async function( board_size ){
                           resolve( { status: false, error: err } );
                         }else{
                           if( result.rows.length == 0 ){
-                            //. 解析終了
-                            resolve( { status: true, result: null } );
+                            //. 最初の１件ができていない
+                            var r = await this.startProcess( board_size );
+                            resolve( r );
                           }else{
-                            //. 見つかった
-                            var r0 = result.rows[0];   
-                            var reversi0 = new Reversi( r0.id, r0.parent_id, r0.depth, r0.choice_idx, [ -1, -1 ], JSON.parse( r0.board ), r0.next_player );
-                            reversi0.next_processed_num = r0.next_processed_num;
-                            reversi0.changeStatus( -1 );
+                            //. 解析終了、だと思うが、next_processed_num = -1 のままのケースが考えられる。１分後に再処理すべき？
+                            sql = "select * from reversi where board_size = $1 and next_choices_num > 0 and next_processed_num = -1 order by depth, updated limit 1";
+                            query = { text: sql, values: [ board_size ] };
+                            conn.query( query, async ( err, result ) => {
+                              if( err ){
+                                console.log( err );
+                                resolve( { status: false, error: err } );
+                              }else{
+                                if( result.rows.length == 0 ){
+                                  //. 解析終了
+                                  resolve( { status: true, result: null } );
+                                }else{
+                                  //. 見つかった
+                                  var r0 = result.rows[0];   
+                                  var reversi0 = new Reversi( r0.id, r0.parent_id, r0.depth, r0.choice_idx, [ -1, -1 ], JSON.parse( r0.board ), r0.next_player );
+                                  reversi0.next_processed_num = r0.next_processed_num;
+                                  reversi0.changeStatus( -1 );
 
-                            //. 見つかった状態の reversi0 を返す
-                            resolve( { status: true, result: reversi0 } );
+                                  //. 見つかった状態の reversi0 を返す
+                                  resolve( { status: true, result: reversi0 } );
+                                }
+                              }
+                            });
                           }
+                        }
+                      });
+                    }else{
+                      var r0 = result.rows[0];   
+                      var reversi0 = new Reversi( r0.id, r0.parent_id, r0.depth, r0.choice_idx, [ -1, -1 ], JSON.parse( r0.board ), r0.next_player );
+                      reversi0.next_processed_num = r0.next_processed_num;
+                      reversi0.changeStatus( -1 );
+                      this.updateReversi( reversi0.id, reversi0.next_processed_num ).then( function( result ){
+                        if( result && result.status ){
+                          //. この状態の reversi0 を返す
+                          resolve( { status: true, result: reversi0 } );
+                        }else{
+                          resolve( { status: false, error: 'update reversi0 failed.' } );
                         }
                       });
                     }
                   }
                 });
-              }else{
-                var r0 = result.rows[0];   
-                var reversi0 = new Reversi( r0.id, r0.parent_id, r0.depth, r0.choice_idx, [ -1, -1 ], JSON.parse( r0.board ), r0.next_player );
-                reversi0.next_processed_num = r0.next_processed_num;
-                reversi0.changeStatus( -1 );
-                this.updateReversi( reversi0.id, reversi0.next_processed_num ).then( function( result ){
-                  if( result && result.status ){
-                    //. この状態の reversi0 を返す
-                    resolve( { status: true, result: reversi0 } );
-                  }else{
-                    resolve( { status: false, error: 'update reversi0 failed.' } );
-                  }
-                });
               }
             }
           });
+
         }catch( e ){
           console.log( e );
           resolve( { status: false, error: err } );

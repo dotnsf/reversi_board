@@ -25,6 +25,46 @@ try{
 }catch( e ){
 }
 
+/*
+process.env.PGSSLMODE = 'no-verify';
+var PG = require( 'pg' );
+PG.defaults.ssl = true;
+var database_url = 'DATABASE_URL' in process.env ? process.env.DATABASE_URL : ''; 
+var pg = null;
+if( database_url ){
+  console.log( 'database_url = ' + database_url );
+  pg = new PG.Pool({
+    connectionString: database_url,
+    //ssl: { require: true, rejectUnauthorized: false },
+    idleTimeoutMillis: ( 3 * 86400 * 1000 )
+  });
+  pg.on( 'error', function( err ){
+    console.log( 'error on working', err );
+    if( err.code && err.code.startsWith( '5' ) ){
+      try_reconnect( 1000 );
+    }
+  });
+}
+
+function try_reconnect( ts ){
+  setTimeout( function(){
+    console.log( 'reconnecting...' );
+    pg = new PG.Pool({
+      connectionString: database_url,
+      //ssl: { require: true, rejectUnauthorized: false },
+      idleTimeoutMillis: ( 3 * 86400 * 1000 )
+    });
+    pg.on( 'error', function( err ){
+      console.log( 'error on retry(' + ts + ')', err );
+      if( err.code && err.code.startsWith( '5' ) ){
+        ts = ( ts < 10000 ? ( ts + 1000 ) : ts );
+        try_reconnect( ts );
+      }
+    });
+  }, ts );
+}
+*/
+
 async function startProcess(){
   return new Promise( async ( resolve, reject ) => {
     var url = BASE_URL + '/api/reversi/start_process';
@@ -64,7 +104,7 @@ async function nextProcess(){
       }else{
         if( body0 && body0.status ){
           var r0 = body0.result;
-          if( r0.next_processed_num == -1 ){
+          if( r0 && r0.next_processed_num == -1 ){
             var reversis = [];
             for( var i = 0; i < r0.next_choices.length; i ++ ){
               var choice = r0.next_choices[i];

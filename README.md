@@ -67,6 +67,8 @@
 
   - `# pg_dump "postgres://postgres:passworrd@xxxx:5432/db" -f yyyymmdd_reversi_before_analytics.dump`
 
+  - `# pg_dump "postgres://postgres:passworrd@xxxx:5432/db" -Fc -f yyyymmdd_reversi_before_analytics-Fc.dump`
+
 5. Run analytics:
 
   - `$ node analytics`
