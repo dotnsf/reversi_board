@@ -25,45 +25,6 @@ try{
 }catch( e ){
 }
 
-/*
-process.env.PGSSLMODE = 'no-verify';
-var PG = require( 'pg' );
-PG.defaults.ssl = true;
-var database_url = 'DATABASE_URL' in process.env ? process.env.DATABASE_URL : ''; 
-var pg = null;
-if( database_url ){
-  console.log( 'database_url = ' + database_url );
-  pg = new PG.Pool({
-    connectionString: database_url,
-    //ssl: { require: true, rejectUnauthorized: false },
-    idleTimeoutMillis: ( 3 * 86400 * 1000 )
-  });
-  pg.on( 'error', function( err ){
-    console.log( 'error on working', err );
-    if( err.code && err.code.startsWith( '5' ) ){
-      try_reconnect( 1000 );
-    }
-  });
-}
-
-function try_reconnect( ts ){
-  setTimeout( function(){
-    console.log( 'reconnecting...' );
-    pg = new PG.Pool({
-      connectionString: database_url,
-      //ssl: { require: true, rejectUnauthorized: false },
-      idleTimeoutMillis: ( 3 * 86400 * 1000 )
-    });
-    pg.on( 'error', function( err ){
-      console.log( 'error on retry(' + ts + ')', err );
-      if( err.code && err.code.startsWith( '5' ) ){
-        ts = ( ts < 10000 ? ( ts + 1000 ) : ts );
-        try_reconnect( ts );
-      }
-    });
-  }, ts );
-}
-*/
 
 async function startProcess(){
   return new Promise( async ( resolve, reject ) => {
@@ -76,9 +37,9 @@ async function startProcess(){
     };
     request( options, function( err0, res0, body0 ){
       if( err0 ){
+        console.log({err0}); 
         resolve( { status: false, error: err0 } );
       }else{
-        //console.log( { body0 } );
         if( body0 && body0.status ){
           resolve( { status: true, result: body0.result } );
         }else{
@@ -88,6 +49,9 @@ async function startProcess(){
     });
   });
 }
+
+const aryMax = function( a, b ){ return Math.max( a, b ); }
+const aryMin = function( a, b ){ return Math.min( a, b ); }
 
 async function nextProcess(){
   return new Promise( async ( resolve, reject ) => {
@@ -102,32 +66,78 @@ async function nextProcess(){
       if( err0 ){
         resolve( { status: false, error: err0 } );
       }else{
-        if( body0 && body0.status ){
-          var r0 = body0.result;
-          if( r0 && r0.next_processed_num == -1 ){
-            var reversis = [];
-            for( var i = 0; i < r0.next_choices.length; i ++ ){
-              var choice = r0.next_choices[i];
-              var reversi1 = new reversi( null, r0.id, r0.depth + 1, i, choice, JSON.parse( JSON.stringify( r0.board ) ), r0.next_player );
-              reversis.push( reversi1 );
-            }
-
-            var url1 = BASE_URL + '/api/reversi/update_process';
-            var options1 = { 
-              url: url1, 
-              method: 'POST',
-              headers: { accept: 'application/json' },
-              json: reversis
-            };
-            request( options1, function( err1, res1, body1 ){
-              if( err1 ){
-                resolve( { status: false, error: err1 } );
-              }else{
-                resolve( { status: true, result: body1 } );
+        if( body0 && body0.status && body0.client ){
+          if( body0.client == 'bot' ){
+            var r0 = body0.result;
+            if( r0 && r0.next_processed_num == -1 ){
+              var reversis = [];
+              for( var i = 0; i < r0.next_choices.length; i ++ ){
+                var choice = r0.next_choices[i];
+                var reversi1 = new reversi( null, r0.id, r0.depth + 1, i, choice, JSON.parse( JSON.stringify( r0.board ) ), r0.next_player );
+                reversis.push( reversi1 );
               }
-            });
+
+              var url1 = BASE_URL + '/api/reversi/update_process';
+              var options1 = { 
+                url: url1, 
+                method: 'POST',
+                headers: { accept: 'application/json' },
+                json: reversis
+              };
+              request( options1, function( err1, res1, body1 ){
+                if( err1 ){
+                  resolve( { status: false, error: err1 } );
+                }else{
+                  resolve( { status: true, result: body1 } );
+                }
+              });
+            }else{
+              resolve( { status: false, error: 'no target found.' } );
+            }
+          }else if( body0.client == 'analytics' ){
+            var parent = body0.parent;
+            var children = body0.children;
+            if( parent && children && children.length > 0 ){
+              var values0 = [];
+              var values1 = [];
+              for( var i = 0; i < children.length; i ++ ){
+                values0.push( children[i].value0 );
+                values1.push( children[i].value1 );
+              }
+
+              //. #18 ここを逆にして再度解析する
+              if( parent.next_player == -1 ){
+                parent.value0 = values1.reduce( aryMin );
+                parent.value1 = values0.reduce( aryMax );
+              }else{
+                parent.value0 = values1.reduce( aryMax );
+                parent.value1 = values0.reduce( aryMin );
+              }
+
+              var url1 = BASE_URL + '/api/reversi/target';
+              var options1 = { 
+                url: url1, 
+                method: 'PUT',
+                headers: { accept: 'application/json' },
+                json: { id: parent.id, value0: parent.value0, value1: parent.value1 }
+              };
+              request( options1, function( err1, res1, body1 ){
+                if( err1 ){
+                  resolve( { status: false, error: err1 } );
+                }else{
+                  //resolve( { status: true, result: body1 } );
+                  body1.reversi = parent;
+                  body1.finished = ( parent.depth == 0 );
+      
+                  console.log( { body1 } );
+                  resolve( body1 );
+                }
+              });
+            }else{
+              resolve( { status: false, error: 'failed to get parent and/or children.' } );
+            }
           }else{
-            resolve( { status: false, error: 'no target found.' } );
+            resolve( { status: false, error: r0 } );
           }
         }else{
           resolve( { status: false, error: body0.error } );

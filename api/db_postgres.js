@@ -266,7 +266,7 @@ api.startProcess = async function( board_size ){
         if( conn ){
           try{
             //. 指定サイズのデータが存在していないことを確認してから作成する
-            var sql = "select * from reversi where board_size = " + board_size + " order by depth";
+            var sql = "select * from reversi where board_size = " + board_size + " order by depth limit 1";
             var query = { text: sql, values: [] };
             conn.query( query, ( err, result ) => {
               if( err ){
@@ -308,7 +308,6 @@ api.startProcess = async function( board_size ){
 };
 
 api.nextProcess = async function( board_size ){
-  //. startProcess はおそらく問題なし
   return new Promise( async ( resolve, reject ) => {
     if( pg ){
       conn = await pg.connect();
@@ -317,14 +316,17 @@ api.nextProcess = async function( board_size ){
           //. #14
           var sql = "select * from reversi where board_size = $1 and next_processed_num < 1 limit 1";
           var query = { text: sql, values: [ board_size ] };
-          conn.query( query, ( err, result ) => {
+          conn.query( query, async ( err, result ) => {
             if( err ){
               console.log( err );
               resolve( { status: false, error: err } );
             }else{
               if( result.rows.length == 0 ){
                 //. analytics.js
-                resolve( { status: false, error: 'no data prepared yet.' } );
+                //resolve( { status: false, error: 'no data prepared yet.' } );
+                var r0 = await this.getTarget( board_size );   // { status: true, parent: result0.rows[0], children: result1.rows }
+                r0.client = 'analytics';
+                resolve( r0 );
               }else{
                 //. bot.js
                 //. 特定の board_size 値を持っているレコードの中で、 ( next_processed_num = 0 || ( next_processed_num = -1 && updated + 60000 < t ) を満たしているレコードを探す
@@ -335,7 +337,7 @@ api.nextProcess = async function( board_size ){
                 conn.query( query, ( err, result ) => {
                   if( err ){
                     console.log( err );
-                    resolve( { status: false, error: err } );
+                    resolve( { status: false, client: 'bot', error: err } );
                   }else{
                     if( result.rows.length == 0 ){
                       //. 最初の１件ができていない？　または処理終了？
@@ -344,11 +346,12 @@ api.nextProcess = async function( board_size ){
                       conn.query( query, async ( err, result ) => {
                         if( err ){
                           console.log( err );
-                          resolve( { status: false, error: err } );
+                          resolve( { status: false, client: 'bot', error: err } );
                         }else{
                           if( result.rows.length == 0 ){
                             //. 最初の１件ができていない
                             var r = await this.startProcess( board_size );
+                            r.client = 'bot';
                             resolve( r );
                           }else{
                             //. 解析終了、だと思うが、next_processed_num = -1 のままのケースが考えられる。１分後に再処理すべき？
@@ -357,11 +360,11 @@ api.nextProcess = async function( board_size ){
                             conn.query( query, async ( err, result ) => {
                               if( err ){
                                 console.log( err );
-                                resolve( { status: false, error: err } );
+                                resolve( { status: false, client: 'bot', error: err } );
                               }else{
                                 if( result.rows.length == 0 ){
                                   //. 解析終了
-                                  resolve( { status: true, result: null } );
+                                  resolve( { status: true, client: 'bot', result: null } );
                                 }else{
                                   //. 見つかった
                                   var r0 = result.rows[0];   
@@ -370,7 +373,7 @@ api.nextProcess = async function( board_size ){
                                   reversi0.changeStatus( -1 );
 
                                   //. 見つかった状態の reversi0 を返す
-                                  resolve( { status: true, result: reversi0 } );
+                                  resolve( { status: true, client: 'bot', result: reversi0 } );
                                 }
                               }
                             });
@@ -385,9 +388,9 @@ api.nextProcess = async function( board_size ){
                       this.updateReversi( reversi0.id, reversi0.next_processed_num ).then( function( result ){
                         if( result && result.status ){
                           //. この状態の reversi0 を返す
-                          resolve( { status: true, result: reversi0 } );
+                          resolve( { status: true, client: 'bot', result: reversi0 } );
                         }else{
-                          resolve( { status: false, error: 'update reversi0 failed.' } );
+                          resolve( { status: false, client: 'bot', error: 'update reversi0 failed.' } );
                         }
                       });
                     }
@@ -396,7 +399,6 @@ api.nextProcess = async function( board_size ){
               }
             }
           });
-
         }catch( e ){
           console.log( e );
           resolve( { status: false, error: err } );
@@ -738,7 +740,175 @@ api.readInfoById = async function( id ){
           resolve( { status: false, error: 'db not ready.' } );
         }
       }else{
-        resolve( { status: false, error: 'no proper id.' } );
+        resolve( { status: false, error: 'readInfoById: no proper id.' } );
+      }
+    }else{
+      resolve( { status: false, error: 'no connection.' } );
+    }
+  });
+};
+
+//. #14
+api.getTarget = async function( board_size ){
+  return new Promise( async ( resolve, reject ) => {
+    if( pg ){
+      if( typeof board_size == 'string' ){ board_size = parseIint( board_size ); }
+      if( board_size == 4 || board_size == 6 || board_size == 8 ){
+        conn = await pg.connect();
+        if( conn ){
+          try{
+            var t = ( new Date() ).getTime();
+            var sql = "select id, parent_id, depth, choice_idx, player0_count, player1_count, value0, value1, value_status, next_player from reversi where board_size = $1 and depth = ( select max(depth) from reversi where ( value_status = 0 or ( value_status = -2 and updated + 60000 < $2 ) ) ) and ( value_status = 0 or ( value_status = -2 and updated + 60000 < $3 ) ) order by parent_id, choice_idx limit 1";
+            var query = { text: sql, values: [ board_size, t, t ] };
+            conn.query( query, function( err, result0 ){
+              if( err ){
+                console.log( err );
+                resolve( { status: false, error: err } );
+              }else{
+                sql = "update reversi set value_status = -2, updated = $1 where id = $2";
+                var t = ( new Date() ).getTime();
+                query = { text: sql, values: [ t, result0.rows[0].id ] };
+
+                conn.query( query, function( err, result ){
+                  if( err ){
+                    console.log( err );
+                    resolve( { status: false, error: err } );
+                  }else{
+                    sql = "select id, parent_id, depth, choice_idx, player0_count, player1_count, value0, value1, value_status, next_player from reversi where parent_id = $1 order by choice_idx";
+                    query = { text: sql, values: [ result0.rows[0].id ] };
+                    conn.query( query, function( err1, result1 ){
+                      if( err1 ){
+                        console.log( err1 );
+  
+                        sql = "update reversi set value_status = 0, updated = $1 where id = $2";
+                        t = ( new Date() ).getTime();
+                        query = { text: sql, values: [ t, result0.rows[0].id ] };
+                        conn.query( query, function( err2, result2 ){
+                          if( err2 ){
+                            console.log( err2 );
+                            resolve( { status: false, error: err2 } );
+                          }else{
+                            resolve( { status: false, error: err1 } );
+                          }
+                        });
+                      }else{
+                        resolve( { status: true, parent: result0.rows[0], children: result1.rows } );
+                      }
+                    });
+                  }
+                });
+              }
+            });
+          }catch( e ){
+            console.log( e );
+            resolve( { status: false, error: err } );
+          }finally{
+            if( conn ){
+              conn.release();
+            }
+          }
+        }else{
+          resolve( { status: false, error: 'db not ready.' } );
+        }
+      }else{
+        resolve( { status: false, error: 'no proper board_size.' } );
+      }
+    }else{
+      resolve( { status: false, error: 'no connection.' } );
+    }
+  });
+};
+
+api.updateTarget = async function( id, value0, value1 ){
+  return new Promise( async ( resolve, reject ) => {
+    if( pg ){
+      console.log( id, value0, value1 );
+      if( id != null && value0 != null & value1 != null ){
+        conn = await pg.connect();
+        if( conn ){
+          try{
+            var sql = 'update reversi set value0 = $1, value1 = $2, value_status = 2, updated = $3 where id = $4';
+            var t = ( new Date() ).getTime();
+            var query = { text: sql, values: [ value0, value1, t, id ] };
+            conn.query( query, function( err, result ){
+              if( err ){
+                console.log( err );
+                resolve( { status: false, error: err } );
+              }else{
+                resolve( { status: true, result: result } );
+              }
+            });
+          }catch( e ){
+            console.log( e );
+            resolve( { status: false, error: err } );
+          }finally{
+            if( conn ){
+              conn.release();
+            }
+          }
+        }else{
+          resolve( { status: false, error: 'db not ready.' } );
+        }
+      }else{
+        resolve( { status: false, error: 'updateTarget: no proper id.' } );
+      }
+    }else{
+      resolve( { status: false, error: 'no connection.' } );
+    }
+  });
+};
+
+//. #17
+api.getBestChoice = async function( board, next_player ){
+  return new Promise( async ( resolve, reject ) => {
+    if( pg ){
+      if( board != null && board.length >= 4 && next_player != 0 ){
+        conn = await pg.connect();
+        if( conn ){
+          try{
+            var sql = "select id, choice_idx, value0, value1, next_player from reversi where parent_id = ( select id from reversi where board = $1 and next_player = $2 and value_status = 1 limit 1 ) order by choice_idx";
+            var query = { text: sql, values: [ board, next_player ] };
+            conn.query( query, function( err, result0 ){
+              if( err ){
+                console.log( err );
+                resolve( { status: false, error: err } );
+              }else{
+                if( result0.rows.length > 0 ){
+                  var idx = 0;
+                  var v = ( next_player == 1 ? result0.rows[0].value0 : result0.rows[0].value1 );
+                  for( var i = 1; i < result0.rows.length; i ++ ){
+                    if( next_player == 1 ){
+                      if( result0.rows[i].value0 > v ){
+                        v = result0.rows[i].value0;
+                        idx = i;
+                      }
+                    }else{
+                      if( result0.rows[i].value1 < v ){
+                        v = result0.rows[i].value1;
+                        idx = i;
+                      }
+                    }
+                  }
+
+                  resolve( { status: true, best_choice_idx: idx } );
+                }else{
+                  resolve( { status: false, error: 'no analysed records found.' } );
+                }
+              }
+            });
+          }catch( e ){
+            console.log( e );
+            resolve( { status: false, error: err } );
+          }finally{
+            if( conn ){
+              conn.release();
+            }
+          }
+        }else{
+          resolve( { status: false, error: 'db not ready.' } );
+        }
+      }else{
+        resolve( { status: false, error: 'no proper board and/or next_player.' } );
       }
     }else{
       resolve( { status: false, error: 'no connection.' } );
@@ -794,6 +964,70 @@ api.post( '/reversi/update_process', async function( req, res ){
     res.end();
   });
 });
+
+//. #14
+api.post( '/reversi/target', async function( req, res ){
+  res.contentType( 'application/json; charset=utf-8' );
+
+  var board_size = 0;
+  if( req.body.board_size ){
+    var _board_size = req.body.board_size;
+    try{
+      board_size = parseInt( _board_size );
+    }catch( e ){
+    }
+  }
+  api.getTarget( board_size ).then( function( result ){
+    res.status( result.status ? 200 : 400 );
+    res.write( JSON.stringify( result, null, 2 ) );  //. { status: true, parent: result0.rows[0], children: result1.rows }
+    res.end();
+  });
+});
+
+api.put( '/reversi/target', async function( req, res ){
+  res.contentType( 'application/json; charset=utf-8' );
+
+  var id = '';
+  var value0 = null;
+  var value1 = null;
+  if( req.body.id ){
+    id = req.body.id;
+  }
+  if( req.body.value0 ){
+    var _value0 = req.body.value0;
+    try{
+      value0 = parseInt( _value0 );
+    }catch( e ){
+    }
+  }
+  if( req.body.value1 ){
+    var _value1 = req.body.value1;
+    try{
+      value1 = parseInt( _value1 );
+    }catch( e ){
+    }
+  }
+
+  api.updateTarget( id, value0, value1 ).then( function( result ){
+    res.status( result.status ? 200 : 400 );
+    res.write( JSON.stringify( result, null, 2 ) );  //. { status: true, result: {...} }
+    res.end();
+  });
+});
+
+//. #17
+api.post( '/reversi/best_choice', async function( req, res ){
+  res.contentType( 'application/json; charset=utf-8' );
+
+  var board = req.body.board;
+  var next_player = parseInt( req.body.board );
+  api.getBestChoice( board, next_player ).then( function( result ){
+    res.status( result.status ? 200 : 400 );
+    res.write( JSON.stringify( result, null, 2 ) );  //. { status: true, best_choice_idx: 2 }
+    res.end();
+  });
+});
+
 
 
 api.post( '/reversi', async function( req, res ){

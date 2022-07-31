@@ -82,14 +82,14 @@ async function getTargetRecords( board_size ){
       if( conn ){
         try{
           var t = ( new Date() ).getTime();
-          var sql = "select id, parent_id, depth, choice_idx, player0_count, player1_count, value0, value1, value_status, next_player from reversi where board_size = $1 and depth = ( select max(depth) from reversi where ( value_status = 0 or ( value_status = -1 and updated + 60000 < $2 ) ) ) and ( value_status = 0 or ( value_status = -1 and updated + 60000 < $3 ) ) order by parent_id, choice_idx limit 1";
+          var sql = "select id, parent_id, depth, choice_idx, player0_count, player1_count, value0, value1, value_status, next_player from reversi where board_size = $1 and depth = ( select max(depth) from reversi where ( value_status = 0 or ( value_status = -2 and updated + 60000 < $2 ) ) ) and ( value_status = 0 or ( value_status = -2 and updated + 60000 < $3 ) ) order by parent_id, choice_idx limit 1";
           var query = { text: sql, values: [ board_size, t, t ] };
           conn.query( query, function( err, result0 ){
             if( err ){
               console.log( err );
               resolve( { status: false, error: err } );
             }else{
-              sql = "update reversi set value_status = -1, updated = $1 where id = $2";
+              sql = "update reversi set value_status = -2, updated = $1 where id = $2";
               var t = ( new Date() ).getTime();
               query = { text: sql, values: [ t, result0.rows[0].id ] };
 
@@ -104,7 +104,7 @@ async function getTargetRecords( board_size ){
                     if( err1 ){
                       console.log( err1 );
 
-                      sql = "update reversi set value_status = 1, updated = $1 where id = $2";
+                      sql = "update reversi set value_status = 0, updated = $1 where id = $2";
                       t = ( new Date() ).getTime();
                       query = { text: sql, values: [ t, result0.rows[0].id ] };
                       conn.query( query, function( err2, result2 ){
@@ -146,7 +146,7 @@ async function updateValue( id, value0, value1 ){
       conn = await pg.connect();
       if( conn ){
         try{
-          var sql = 'update reversi set value0 = $1, value1 = $2, value_status = 1, updated = $3 where id = $4';
+          var sql = 'update reversi set value0 = $1, value1 = $2, value_status = 2, updated = $3 where id = $4';
           var t = ( new Date() ).getTime();
           var query = { text: sql, values: [ value0, value1, t, id ] };
           conn.query( query, function( err, result ){

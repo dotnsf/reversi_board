@@ -135,7 +135,34 @@ paths:
           description: 成功
         '400':
           description: エラー
+  /reversi/best_choice:
+    post:
+      tags:
+        - reversi
+      summary: リバーシAI
+      description: リバーシAI
+      produces:
+        - application/json
+      parameters:
+        - name: body
+          in: body
+          schema:
+            $ref: '#/definitions/ChoiceRequest'
+      responses:
+        '200':
+          description: 成功
+        '400':
+          description: エラー
 definitions:
+  ChoiceRequest:
+    type: object
+    properties:
+      board:
+        type: string
+        description: ボード情報
+      next_player:
+        type: integer
+        description: 次に選択するプレイヤー(1:先手、-1:後手)
   ReversiRequest:
     type: object
     properties:
