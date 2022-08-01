@@ -890,7 +890,7 @@ api.getBestChoice = async function( board, next_player ){
                     }
                   }
 
-                  resolve( { status: true, best_choice_idx: idx, value: v );
+                  resolve( { status: true, best_choice_idx: idx, value: v } );
                 }else{
                   resolve( { status: false, error: 'no analysed records found.' } );
                 }
