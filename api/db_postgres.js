@@ -765,38 +765,42 @@ api.getTarget = async function( board_size ){
                 console.log( err );
                 resolve( { status: false, error: err } );
               }else{
-                sql = "update reversi set value_status = -2, updated = $1 where id = $2";
-                var t = ( new Date() ).getTime();
-                query = { text: sql, values: [ t, result0.rows[0].id ] };
+                if( result0 && result0.rows && result0.rows.length > 0 ){
+                  sql = "update reversi set value_status = -2, updated = $1 where id = $2";
+                  var t = ( new Date() ).getTime();
+                  query = { text: sql, values: [ t, result0.rows[0].id ] };
 
-                conn.query( query, function( err, result ){
-                  if( err ){
-                    console.log( err );
-                    resolve( { status: false, error: err } );
-                  }else{
-                    sql = "select id, parent_id, depth, choice_idx, player0_count, player1_count, value0, value1, value_status, next_player from reversi where parent_id = $1 order by choice_idx";
-                    query = { text: sql, values: [ result0.rows[0].id ] };
-                    conn.query( query, function( err1, result1 ){
-                      if( err1 ){
-                        console.log( err1 );
-  
-                        sql = "update reversi set value_status = 0, updated = $1 where id = $2";
-                        t = ( new Date() ).getTime();
-                        query = { text: sql, values: [ t, result0.rows[0].id ] };
-                        conn.query( query, function( err2, result2 ){
-                          if( err2 ){
-                            console.log( err2 );
-                            resolve( { status: false, error: err2 } );
-                          }else{
-                            resolve( { status: false, error: err1 } );
-                          }
-                        });
-                      }else{
-                        resolve( { status: true, parent: result0.rows[0], children: result1.rows } );
-                      }
-                    });
-                  }
-                });
+                  conn.query( query, function( err, result ){
+                    if( err ){
+                      console.log( err );
+                      resolve( { status: false, error: err } );
+                    }else{
+                      sql = "select id, parent_id, depth, choice_idx, player0_count, player1_count, value0, value1, value_status, next_player from reversi where parent_id = $1 order by choice_idx";
+                      query = { text: sql, values: [ result0.rows[0].id ] };
+                      conn.query( query, function( err1, result1 ){
+                        if( err1 ){
+                          console.log( err1 );
+    
+                          sql = "update reversi set value_status = 0, updated = $1 where id = $2";
+                          t = ( new Date() ).getTime();
+                          query = { text: sql, values: [ t, result0.rows[0].id ] };
+                          conn.query( query, function( err2, result2 ){
+                            if( err2 ){
+                              console.log( err2 );
+                              resolve( { status: false, error: err2 } );
+                            }else{
+                              resolve( { status: false, error: err1 } );
+                            }
+                          });
+                        }else{
+                          resolve( { status: true, parent: result0.rows[0], children: result1.rows } );
+                        }
+                      });
+                    }
+                  });
+                }else{
+                  resolve( { status: true, parent: null, children: null } );
+                }
               }
             });
           }catch( e ){

@@ -95,46 +95,54 @@ async function nextProcess(){
               resolve( { status: false, error: 'no target found.' } );
             }
           }else if( body0.client == 'analytics' ){
-            var parent = body0.parent;
-            var children = body0.children;
-            if( parent && children && children.length > 0 ){
-              var values0 = [];
-              var values1 = [];
-              for( var i = 0; i < children.length; i ++ ){
-                values0.push( children[i].value0 );
-                values1.push( children[i].value1 );
-              }
+            if( r && r.status ){
+              if( r.parent && r.children ){
+                var parent = body0.parent;
+                var children = body0.children;
+                if( parent && children && children.length > 0 ){
+                  var values0 = [];
+                  var values1 = [];
+                  for( var i = 0; i < children.length; i ++ ){
+                    values0.push( children[i].value0 );
+                    values1.push( children[i].value1 );
+                  }
 
-              //. #18 ここを逆にして再度解析する
-              if( parent.next_player == -1 ){
-                parent.value0 = values1.reduce( aryMin );
-                parent.value1 = values0.reduce( aryMax );
-              }else{
-                parent.value0 = values1.reduce( aryMax );
-                parent.value1 = values0.reduce( aryMin );
-              }
-
-              var url1 = BASE_URL + '/api/reversi/target';
-              var options1 = { 
-                url: url1, 
-                method: 'PUT',
-                headers: { accept: 'application/json' },
-                json: { id: parent.id, value0: parent.value0, value1: parent.value1 }
-              };
-              request( options1, function( err1, res1, body1 ){
-                if( err1 ){
-                  resolve( { status: false, error: err1 } );
-                }else{
-                  //resolve( { status: true, result: body1 } );
-                  body1.reversi = parent;
-                  body1.finished = ( parent.depth == 0 );
+                  //. #18 ここを逆にして再度解析する
+                  if( parent.next_player == -1 ){
+                    parent.value0 = values1.reduce( aryMin );
+                    parent.value1 = values0.reduce( aryMax );
+                  }else{
+                    parent.value0 = values1.reduce( aryMax );
+                    parent.value1 = values0.reduce( aryMin );
+                  }
+    
+                  var url1 = BASE_URL + '/api/reversi/target';
+                  var options1 = { 
+                    url: url1, 
+                    method: 'PUT',
+                    headers: { accept: 'application/json' },
+                    json: { id: parent.id, value0: parent.value0, value1: parent.value1 }
+                  };
+                  request( options1, function( err1, res1, body1 ){
+                    if( err1 ){
+                      resolve( { status: false, error: err1 } );
+                    }else{
+                      //resolve( { status: true, result: body1 } );
+                      body1.reversi = parent;
+                      body1.finished = ( parent.depth == 0 );
       
-                  console.log( { body1 } );
-                  resolve( body1 );
+                      console.log( { body1 } );
+                      resolve( body1 );
+                    }
+                  });
+                }else{
+                  resolve( { status: false, error: 'failed to get parent and/or children.' } );
                 }
-              });
+              }else{
+                
+              }
             }else{
-              resolve( { status: false, error: 'failed to get parent and/or children.' } );
+
             }
           }else{
             resolve( { status: false, error: r0 } );

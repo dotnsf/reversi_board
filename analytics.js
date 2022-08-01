@@ -89,38 +89,42 @@ async function getTargetRecords( board_size ){
               console.log( err );
               resolve( { status: false, error: err } );
             }else{
-              sql = "update reversi set value_status = -2, updated = $1 where id = $2";
-              var t = ( new Date() ).getTime();
-              query = { text: sql, values: [ t, result0.rows[0].id ] };
+              if( result0 && result0.rows && result0.rows.length > 0 ){
+                sql = "update reversi set value_status = -2, updated = $1 where id = $2";
+                var t = ( new Date() ).getTime();
+                query = { text: sql, values: [ t, result0.rows[0].id ] };
 
-              conn.query( query, function( err, result ){
-                if( err ){
-                  console.log( err );
-                  resolve( { status: false, error: err } );
-                }else{
-                  sql = "select id, parent_id, depth, choice_idx, player0_count, player1_count, value0, value1, value_status, next_player from reversi where parent_id = $1 order by choice_idx";
-                  query = { text: sql, values: [ result0.rows[0].id ] };
-                  conn.query( query, function( err1, result1 ){
-                    if( err1 ){
-                      console.log( err1 );
-
-                      sql = "update reversi set value_status = 0, updated = $1 where id = $2";
-                      t = ( new Date() ).getTime();
-                      query = { text: sql, values: [ t, result0.rows[0].id ] };
-                      conn.query( query, function( err2, result2 ){
-                        if( err2 ){
-                          console.log( err2 );
-                          resolve( { status: false, error: err2 } );
-                        }else{
-                          resolve( { status: false, error: err1 } );
-                        }
-                      });
-                    }else{
-                      resolve( { status: true, parent: result0.rows[0], children: result1.rows } );
-                    }
-                  });
-                }
-              });
+                conn.query( query, function( err, result ){
+                  if( err ){
+                    console.log( err );
+                    resolve( { status: false, error: err } );
+                  }else{
+                    sql = "select id, parent_id, depth, choice_idx, player0_count, player1_count, value0, value1, value_status, next_player from reversi where parent_id = $1 order by choice_idx";
+                    query = { text: sql, values: [ result0.rows[0].id ] };
+                    conn.query( query, function( err1, result1 ){
+                      if( err1 ){
+                        console.log( err1 );
+  
+                        sql = "update reversi set value_status = 0, updated = $1 where id = $2";
+                        t = ( new Date() ).getTime();
+                        query = { text: sql, values: [ t, result0.rows[0].id ] };
+                        conn.query( query, function( err2, result2 ){
+                          if( err2 ){
+                            console.log( err2 );
+                            resolve( { status: false, error: err2 } );
+                          }else{
+                            resolve( { status: false, error: err1 } );
+                          }
+                        });
+                      }else{
+                        resolve( { status: true, parent: result0.rows[0], children: result1.rows } );
+                      }
+                    });
+                  }
+                });
+              }else{
+                resolve( { status: true, parent: null, children: null } );
+              }
             }
           });
         }catch( e ){
@@ -181,30 +185,36 @@ async function processOneRecord( board_size ){
   return new Promise( async ( resolve, reject ) => {
     var r = await getTargetRecords( board_size );
     if( r && r.status ){
-      var parent = r.parent;
-      var children = r.children;
-      var values0 = [];
-      var values1 = [];
-      for( var i = 0; i < children.length; i ++ ){
-        values0.push( children[i].value0 );
-        values1.push( children[i].value1 );
-      }
+      if( r.parent && r.children ){
+        var parent = r.parent;
+        var children = r.children;
+        var values0 = [];
+        var values1 = [];
+        for( var i = 0; i < children.length; i ++ ){
+          values0.push( children[i].value0 );
+          values1.push( children[i].value1 );
+        }
 
-      //. #18 ここを逆にして再度解析する
-      if( parent.next_player == -1 ){
-        parent.value0 = values1.reduce( aryMin );
-        parent.value1 = values0.reduce( aryMax );
+        //. #18 ここを逆にして再度解析する
+        if( parent.next_player == -1 ){
+          parent.value0 = values1.reduce( aryMin );
+          parent.value1 = values0.reduce( aryMax );
+        }else{
+          parent.value0 = values1.reduce( aryMax );
+          parent.value1 = values0.reduce( aryMin );
+        }
+
+        r = await updateValue( parent.id, parent.value0, parent.value1 );
+        r.reversi = parent;
+        r.finished = ( parent.depth == 0 );
+        
+        console.log( { r } );
+        resolve( r );
       }else{
-        parent.value0 = values1.reduce( aryMax );
-        parent.value1 = values0.reduce( aryMin );
+        console.log('finished.');
+        r.finished = true;
+        resolve( r );
       }
-
-      r = await updateValue( parent.id, parent.value0, parent.value1 );
-      r.reversi = parent;
-      r.finished = ( parent.depth == 0 );
-      
-      console.log( { r } );
-      resolve( r );
     }else{
       resolve( { status: false, error: r.error } );
     }
