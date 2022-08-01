@@ -95,6 +95,8 @@ async function nextProcess(){
               resolve( { status: false, error: 'no target found.' } );
             }
           }else if( body0.client == 'analytics' ){
+            console.log( 'analytics' );
+            process.exit( 0 );
             if( r && r.status ){
               if( r.parent && r.children ){
                 var parent = body0.parent;
