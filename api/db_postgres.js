@@ -70,7 +70,7 @@ api.createReversi = async function( reversi ){
       conn = await pg.connect();
       if( conn ){
         try{
-          var sql = 'insert into reversi( id, parent_id, board_size, depth, choice_idx, choice_x, choice_y, board, next_choices, next_choices_num, next_processed_num, player0_count, player1_count, next_player, value0, value1, value_status, created, updated ) values ( $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19 )';
+          var sql = 'insert into reversi( id, parent_id, board_size, depth, choice_idx, choice_x, choice_y, board, next_choices, next_choices_num, next_processed_num, player0_count, player1_count, next_player, value, value_status, created, updated ) values ( $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18 )';
           if( !reversi.id ){
             reversi.id = generateUUID(); //uuidv4();
           }
@@ -78,16 +78,14 @@ api.createReversi = async function( reversi ){
           reversi.created = t;
           reversi.updated = t;
           if( reversi.next_choices_num == 0 ){
-            reversi.value0 = reversi.player0_count - reversi.player1_count;
-            reversi.value1 = reversi.player0_count - reversi.player1_count;
+            reversi.value = reversi.player0_count - reversi.player1_count;
             reversi.value_status = 1;
           }else{
-            reversi.value0 = null;
-            reversi.value1 = null;
+            reversi.value = null;
             reversi.value_status = 0;
           }
           //console.log( reversi );
-          var query = { text: sql, values: [ reversi.id, reversi.parent_id, reversi.board_size, reversi.depth, reversi.choice_idx, reversi.choice[0], reversi.choice[1], JSON.stringify( reversi.board ), JSON.stringify( reversi.next_choices ), reversi.next_choices_num, reversi.next_processed_num, reversi.player0_count, reversi.player1_count, reversi.next_player, reversi.value0, reversi.value1, reversi.value_status, reversi.created, reversi.updated ] };
+          var query = { text: sql, values: [ reversi.id, reversi.parent_id, reversi.board_size, reversi.depth, reversi.choice_idx, reversi.choice[0], reversi.choice[1], JSON.stringify( reversi.board ), JSON.stringify( reversi.next_choices ), reversi.next_choices_num, reversi.next_processed_num, reversi.player0_count, reversi.player1_count, reversi.next_player, reversi.value, reversi.value_status, reversi.created, reversi.updated ] };
           conn.query( query, function( err, result ){
             if( err ){
               console.log( err );
@@ -128,19 +126,17 @@ api.createReversis = function( reversis ){
             reversis[i].created = t;
             reversis[i].updated = t;
             if( reversis[i].next_choices_num == 0 ){
-              reversis[i].value0 = reversis[i].player0_count - reversis[i].player1_count;
-              reversis[i].value1 = reversis[i].player0_count - reversis[i].player1_count;
+              reversis[i].value = reversis[i].player0_count - reversis[i].player1_count;
               reversis[i].value_status = 1;
             }else{
-              reversis[i].value0 = null;
-              reversis[i].value1 = null;
+              reversis[i].value = null;
               reversis[i].value_status = 0;
             }
 
-            params.push( [ reversis[i].id, reversis[i].parent_id, reversis[i].board_size, reversis[i].depth, reversis[i].choice_idx, reversis[i].choice[0], reversis[i].choice[1], JSON.stringify( reversis[i].board ), JSON.stringify( reversis[i].next_choices ), reversis[i].next_choices_num, reversis[i].next_processed_num, reversis[i].player0_count, reversis[i].player1_count, reversis[i].next_player, reversis[i].value0, reversis[i].value1, reversis[i].value_status, reversis[i].created, reversis[i].updated ] );
+            params.push( [ reversis[i].id, reversis[i].parent_id, reversis[i].board_size, reversis[i].depth, reversis[i].choice_idx, reversis[i].choice[0], reversis[i].choice[1], JSON.stringify( reversis[i].board ), JSON.stringify( reversis[i].next_choices ), reversis[i].next_choices_num, reversis[i].next_processed_num, reversis[i].player0_count, reversis[i].player1_count, reversis[i].next_player, reversis[i].value, reversis[i].value_status, reversis[i].created, reversis[i].updated ] );
           }
 
-          var sql = format( 'insert into reversi( id, parent_id, board_size, depth, choice_idx, choice_x, choice_y, board, next_choices, next_choices_num, next_processed_num, player0_count, player1_count, next_player, value0, value1, value_status, created, updated ) values %L', params );
+          var sql = format( 'insert into reversi( id, parent_id, board_size, depth, choice_idx, choice_x, choice_y, board, next_choices, next_choices_num, next_processed_num, player0_count, player1_count, next_player, value, value_status, created, updated ) values %L', params );
           conn.query( sql, [], function( err, result ){
             if( err ){
               //. "error: duplicate key value violates unique constraint "reversi_pkey""" ??
@@ -758,7 +754,7 @@ api.getTarget = async function( board_size ){
         if( conn ){
           try{
             var t = ( new Date() ).getTime();
-            var sql = "select id, parent_id, depth, choice_idx, player0_count, player1_count, value0, value1, value_status, next_player from reversi where board_size = $1 and depth = ( select max(depth) from reversi where ( value_status = 0 or ( value_status = -2 and updated + 60000 < $2 ) ) ) and ( value_status = 0 or ( value_status = -2 and updated + 60000 < $3 ) ) order by parent_id, choice_idx limit 1";
+            var sql = "select id, parent_id, depth, choice_idx, player0_count, player1_count, value, value_status, next_player from reversi where board_size = $1 and depth = ( select max(depth) from reversi where ( value_status = 0 or ( value_status = -2 and updated + 60000 < $2 ) ) ) and ( value_status = 0 or ( value_status = -2 and updated + 60000 < $3 ) ) order by parent_id, choice_idx limit 1";
             var query = { text: sql, values: [ board_size, t, t ] };
             conn.query( query, function( err, result0 ){
               if( err ){
@@ -775,7 +771,7 @@ api.getTarget = async function( board_size ){
                       console.log( err );
                       resolve( { status: false, error: err } );
                     }else{
-                      sql = "select id, parent_id, depth, choice_idx, player0_count, player1_count, value0, value1, value_status, next_player from reversi where parent_id = $1 order by choice_idx";
+                      sql = "select id, parent_id, depth, choice_idx, player0_count, player1_count, value, value_status, next_player from reversi where parent_id = $1 order by choice_idx";
                       query = { text: sql, values: [ result0.rows[0].id ] };
                       conn.query( query, function( err1, result1 ){
                         if( err1 ){
@@ -823,7 +819,7 @@ api.getTarget = async function( board_size ){
   });
 };
 
-api.updateTarget = async function( id, value0, value1 ){
+api.updateTarget = async function( id, value ){
   return new Promise( async ( resolve, reject ) => {
     if( pg ){
       console.log( id, value0, value1 );
@@ -831,9 +827,9 @@ api.updateTarget = async function( id, value0, value1 ){
         conn = await pg.connect();
         if( conn ){
           try{
-            var sql = 'update reversi set value0 = $1, value1 = $2, value_status = 2, updated = $3 where id = $4';
+            var sql = 'update reversi set value = $1, value_status = 2, updated = $2 where id = $3';
             var t = ( new Date() ).getTime();
-            var query = { text: sql, values: [ value0, value1, t, id ] };
+            var query = { text: sql, values: [ value, t, id ] };
             conn.query( query, function( err, result ){
               if( err ){
                 console.log( err );
@@ -870,7 +866,7 @@ api.getBestChoice = async function( board, next_player ){
         conn = await pg.connect();
         if( conn ){
           try{
-            var sql = "select id, choice_idx, value0, value1, next_player from reversi where parent_id = ( select id from reversi where board = $1 and next_player = $2 and value_status = 1 limit 1 ) order by choice_idx";
+            var sql = "select id, choice_idx, value, next_player from reversi where parent_id = ( select id from reversi where board = $1 and next_player = $2 and value_status = 1 limit 1 ) order by choice_idx";
             var query = { text: sql, values: [ board, next_player ] };
             conn.query( query, function( err, result0 ){
               if( err ){
@@ -879,22 +875,22 @@ api.getBestChoice = async function( board, next_player ){
               }else{
                 if( result0.rows.length > 0 ){
                   var idx = 0;
-                  var v = ( next_player == 1 ? result0.rows[0].value0 : result0.rows[0].value1 );
+                  var v = result0.rows[0].value;
                   for( var i = 1; i < result0.rows.length; i ++ ){
                     if( next_player == 1 ){
-                      if( result0.rows[i].value0 > v ){
-                        v = result0.rows[i].value0;
+                      if( result0.rows[i].value > v ){
+                        v = result0.rows[i].value;
                         idx = i;
                       }
                     }else{
-                      if( result0.rows[i].value1 < v ){
-                        v = result0.rows[i].value1;
+                      if( result0.rows[i].value < v ){
+                        v = result0.rows[i].value;
                         idx = i;
                       }
                     }
                   }
 
-                  resolve( { status: true, best_choice_idx: idx } );
+                  resolve( { status: true, best_choice_idx: idx, value: v );
                 }else{
                   resolve( { status: false, error: 'no analysed records found.' } );
                 }
@@ -992,27 +988,19 @@ api.put( '/reversi/target', async function( req, res ){
   res.contentType( 'application/json; charset=utf-8' );
 
   var id = '';
-  var value0 = null;
-  var value1 = null;
+  var value = null;
   if( req.body.id ){
     id = req.body.id;
   }
-  if( req.body.value0 ){
-    var _value0 = req.body.value0;
+  if( req.body.value ){
+    var _value = req.body.value;
     try{
-      value0 = parseInt( _value0 );
-    }catch( e ){
-    }
-  }
-  if( req.body.value1 ){
-    var _value1 = req.body.value1;
-    try{
-      value1 = parseInt( _value1 );
+      value = parseInt( _value );
     }catch( e ){
     }
   }
 
-  api.updateTarget( id, value0, value1 ).then( function( result ){
+  api.updateTarget( id, value ).then( function( result ){
     res.status( result.status ? 200 : 400 );
     res.write( JSON.stringify( result, null, 2 ) );  //. { status: true, result: {...} }
     res.end();
