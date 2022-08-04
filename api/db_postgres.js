@@ -866,7 +866,7 @@ api.getBestChoice = async function( board, next_player ){
         conn = await pg.connect();
         if( conn ){
           try{
-            var sql = "select id, choice_idx, value, next_player from reversi where parent_id = ( select id from reversi where board = $1 and next_player = $2 and value_status = 1 limit 1 ) order by choice_idx";
+            var sql = "select id, choice_idx, choice_x, choice_y, board, value, next_player from reversi where parent_id = ( select id from reversi where board = $1 and next_player = $2 and value_status > 0 limit 1 ) order by choice_idx";
             var query = { text: sql, values: [ board, next_player ] };
             conn.query( query, function( err, result0 ){
               if( err ){
@@ -890,7 +890,48 @@ api.getBestChoice = async function( board, next_player ){
                     }
                   }
 
-                  resolve( { status: true, best_choice_idx: idx, value: v } );
+                  resolve( { status: true, best_choice_idx: idx, choice_x: result0.rows[idx].choice_x, choice_y: result0.rows[idx].choice_y, board: result0.rows[idx].board, value: v } );
+                }else{
+                  resolve( { status: false, error: 'no analysed records found.' } );
+                }
+              }
+            });
+          }catch( e ){
+            console.log( e );
+            resolve( { status: false, error: err } );
+          }finally{
+            if( conn ){
+              conn.release();
+            }
+          }
+        }else{
+          resolve( { status: false, error: 'db not ready.' } );
+        }
+      }else{
+        resolve( { status: false, error: 'no proper board and/or next_player.' } );
+      }
+    }else{
+      resolve( { status: false, error: 'no connection.' } );
+    }
+  });
+};
+
+api.getValuesByChoice = async function( board, next_player ){
+  return new Promise( async ( resolve, reject ) => {
+    if( pg ){
+      if( board != null && board.length >= 4 && next_player != 0 ){
+        conn = await pg.connect();
+        if( conn ){
+          try{
+            var sql = "select id, choice_idx, choice_x, choice_y, board, value, next_player from reversi where parent_id = ( select id from reversi where board = $1 and next_player = $2 and value_status > 0 ) order by choice_idx";
+            var query = { text: sql, values: [ board, next_player ] };
+            conn.query( query, function( err, result0 ){
+              if( err ){
+                console.log( err );
+                resolve( { status: false, error: err } );
+              }else{
+                if( result0.rows.length > 0 ){
+                  resolve( { status: true, records: result0.rows } );
                 }else{
                   resolve( { status: false, error: 'no analysed records found.' } );
                 }
@@ -1011,11 +1052,23 @@ api.put( '/reversi/target', async function( req, res ){
 api.post( '/reversi/best_choice', async function( req, res ){
   res.contentType( 'application/json; charset=utf-8' );
 
-  var board = req.body.board;
+  var board = req.body.board;  //. (string)
   var next_player = parseInt( req.body.board );
   api.getBestChoice( board, next_player ).then( function( result ){
     res.status( result.status ? 200 : 400 );
     res.write( JSON.stringify( result, null, 2 ) );  //. { status: true, best_choice_idx: 2 }
+    res.end();
+  });
+});
+
+api.post( '/reversi/values_by_choice', async function( req, res ){
+  res.contentType( 'application/json; charset=utf-8' );
+
+  var board = req.body.board;  //. (string)
+  var next_player = parseInt( req.body.board );
+  api.getValuesByChoice( board, next_player ).then( function( result ){
+    res.status( result.status ? 200 : 400 );
+    res.write( JSON.stringify( result, null, 2 ) );  //. { status: true, records: records }
     res.end();
   });
 });

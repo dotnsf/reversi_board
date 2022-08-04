@@ -43,6 +43,10 @@ app.get( '/', function( req, res ){
   res.render( 'status', { board_size: BOARD_SIZE, id: id } );
 });
 
+app.get( '/ai', function( req, res ){
+  res.render( 'ai', { board_size: BOARD_SIZE } );
+});
+
 app.get( '/work', function( req, res ){
   res.render( 'index', { board_size: BOARD_SIZE } );
 });

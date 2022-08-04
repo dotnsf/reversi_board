@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8"/>
+<script type="text/javascript" src="//code.jquery.com/jquery-2.2.4.min.js"></script>
+<link href="//maxcdn.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" rel="stylesheet"/>
+<script src="//maxcdn.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
+<script src="./reversi.js"></script>
+<script src="./cvi_busy_lib.js"></script>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+
+<!--
+<link rel="shortcut icon" href="/icon.png" type="image/png"/>
+<link rel="icon" href="/icon.png" type="image/png"/>
+<link rel="apple-touch-icon" href="/icon.png"/>
+-->
+
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black"/>
+<meta name="apple-mobile-web-app-title" content="Reversi Status"/>
+<title>Reversi AI - <%= board_size %></title>
+
+<style type="text/css">
+html, body{
+  background-color: #fafafa;
+  font-size: 20px;
+  color: #333;
+}
+.monospace{
+  font-family: "monospace";
+}
+.mytable{
+  background-color: #8c8;
+}
+.td_selected{
+  background-color: #060;
+}
+.td_hover{
+  border-style: solid; 
+  border-color: #f00; 
+}
+</style>
+<script>
+var next_player = 1;
+var current_id = '';
+var board = [
+  [  0,  0,  0,  0 ],
+  [  0,  1, -1,  0 ],
+  [  0, -1,  1,  0 ],
+  [  0 , 0,  0,  0 ]
+];
+var player0_count = 2;
+var player1_count = 2;
+var pcs = [ '●', '・', '○' ];
+var selectable = [];
+
+var obj = null;
+$(function(){
+  obj = getBusyOverlay( 'viewport', {color:'black', opacity:0.5, text:'処理中・・', style:'text-decoration:blink; font-weight:bold; font-size:12px; color:white;' } );
+  $.ajax({
+    url: '/api/rootinfo?board_size=<%= board_size %>',
+    type: 'GET',
+    success: function( result ){
+      obj.remove();
+      if( result && result.result ){
+        current_id = result.result.id;
+        render_board();
+      }
+    },
+    error: function( e0, e1, e2 ){
+      obj.remove();
+      console.log( e0, e1, e2 );
+    }
+  });
+});
+
+function values_by_choice(){
+  $.ajax({
+    url: '/api/reversi/values_by_choice',
+    type: 'POST',
+    data: { board: JSON.stringify( board ), next_player: next_player },
+    success: function( result ){
+      console.log( result );
+      if( result.status ){
+        if( result.records ){
+          // result.records = [ { id, id, choice_idx: choice_idx, choice_x: choice_x, choice_y: choice_y, board: board, value: v } ]
+          //. render_board();
+          render_ai( result.records );
+        }else{
+          console.log( 'POST /api/reversi/values_by_choice failed.' );
+        }
+      }
+    },
+    error: function( e0, e1, e2 ){
+      console.log( e0, e1, e2 );
+    }
+  });
+}
+
+function render_board(){
+  $('#players_info').html( '' );
+  $('#board_info').html( '' );
+
+  var players_info = '<table class="table" style="table-layout: fixed;">'
+    + '<tr><td' + ( next_player == 1 ? ' style="background-color: #aca;"' : '' ) + '>● ' + player0_count + '</td><td> - </td><td' + ( next_player == -1 ? ' style="background-color: #aca;"' : '' ) + '>' + player1_count + ' ○</td></tr>'
+    + '</table>';
+  $('#players_info').html( players_info );
+
+  if( board ){
+    var board_info = '<table class="table table-bordered" style="table-layout: fixed;">';
+    for( var i = 0; i < board.length; i ++ ){
+      var tr = '<tr>';
+      for( var j = 0; j < board[i].length; j ++ ){
+        var td = '<td class="board_td" id="board_' + j + '-' + i + '">'
+          + pcs[board[i][j]+1] + '</td>';
+        tr += td;
+      }
+      tr += '</tr>';
+      board_info += tr;
+    }
+    $('#board_info').html( board_info );
+    $('.board_td').click( function( e ){
+      var id = $(this).attr( 'id' );
+      var t1 = id.indexOf( 'board_' );
+      var t2 = id.indexOf( '-' );
+      if( t1 == 0 && t2 > t1 ){
+        var x = parseInt( id.substring( 6, t2 ) );
+        var y = parseInt( id.substring( t2 + 1 ) );
+        console.log( x, y );
+
+        var idx = -1;
+        var choice_idx = -1;
+        var choice_id = '';
+        for( var i = 0; i < selectable.length && idx == -1; i ++ ){
+          if( selectable[i].x == x && selectable[i].y == y ){
+            idx = i;
+            choice_idx = selectable[i].choice_idx;
+          }
+        }
+        if( idx > -1 ){
+          //. [ x, y ] (choice_idx) を選択
+          console.log( 'idx = ' + idx );
+          next_player = parseInt( $(this).attr( 'next_player' ) );
+
+          obj = getBusyOverlay( 'viewport', {color:'black', opacity:0.5, text:'処理中・・', style:'text-decoration:blink; font-weight:bold; font-size:12px; color:white;' } );
+          $.ajax({
+            url: '/api/infobyparentandchoice?parent_id=' + current_id + '&choice_idx=' + choice_idx,
+            type: 'GET',
+            success: function( result ){
+              obj.remove();
+              console.log( result );
+              if( result.status && result.result ){
+                current_id = result.result.id;
+                board = result.result.board;
+                if( typeof board == 'string' ){
+                  board = JSON.parse( board );
+                }
+                next_player = result.result.next_player;
+                player0_count = result.result.player0_count;
+                player1_count = result.result.player1_count;
+
+                render_board();
+                values_by_choice();
+              }else{
+                console.log( 'GET /api/infobyparentandchoice failed.' );
+              }
+            },
+            error: function( e0, e1, e2 ){
+              obj.remove();
+              console.log( e0, e1, e2 );
+            }
+          });
+        }
+      }
+    });
+  }else{
+    $('#info_div').html( '' );
+  }
+}
+
+function render_ai( info ){
+  // info = [ { id, id, choice_idx: choice_idx, choice_x: choice_x, choice_y: choice_y, board: board, value: v } ]
+  $('#ai_info').html( '' );
+  if( info && info.length ){
+    selectable = [];
+    for( var i = 0; i < info.length; i ++ ){
+      selectable.push( { x: info[i].choice_x, y: info[i].choice_y, idx: info[i].choice_idx } );
+      $('#board_' + info[i].choice_x + '-' + info[i].choice[y]).attr( 'title', info[i].value );
+      $('#board_' + info[i].choice_x + '-' + info[i].choice[y]).attr( 'next_player', info[i].next_player );
+    }
+  }
+}
+</script>
+</head>
+<body>
+
+<div class="container">
+
+  <div>
+    <div id="players_info"></div>
+
+    <div id="board_info"></div>
+
+    <div id="ai_info"></div>
+  </div>
+
+</div>
+
+</html>
