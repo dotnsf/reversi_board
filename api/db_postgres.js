@@ -1065,7 +1065,7 @@ api.post( '/reversi/values_by_choice', async function( req, res ){
   res.contentType( 'application/json; charset=utf-8' );
 
   var board = req.body.board;  //. (string)
-  var next_player = parseInt( req.body.board );
+  var next_player = parseInt( req.body.next_player );
   api.getValuesByChoice( board, next_player ).then( function( result ){
     res.status( result.status ? 200 : 400 );
     res.write( JSON.stringify( result, null, 2 ) );  //. { status: true, records: records }

@@ -52,7 +52,7 @@ var board = [
 ];
 var player0_count = 2;
 var player1_count = 2;
-var pcs = [ '●', '・', '○' ];
+var pcs = [ '○', '・', '●' ];
 var selectable = [];
 
 var obj = null;
@@ -66,6 +66,7 @@ $(function(){
       if( result && result.result ){
         current_id = result.result.id;
         render_board();
+        init_render_ai();  //. 初期状態用
       }
     },
     error: function( e0, e1, e2 ){
@@ -125,9 +126,9 @@ function render_board(){
       var t1 = id.indexOf( 'board_' );
       var t2 = id.indexOf( '-' );
       if( t1 == 0 && t2 > t1 ){
-        var x = parseInt( id.substring( 6, t2 ) );
-        var y = parseInt( id.substring( t2 + 1 ) );
-        console.log( x, y );
+        var y = parseInt( id.substring( 6, t2 ) );
+        var x = parseInt( id.substring( t2 + 1 ) );
+        //console.log( x, y );
 
         var idx = -1;
         var choice_idx = -1;
@@ -140,16 +141,14 @@ function render_board(){
         }
         if( idx > -1 ){
           //. [ x, y ] (choice_idx) を選択
-          console.log( 'idx = ' + idx );
-          next_player = parseInt( $(this).attr( 'next_player' ) );
+          //console.log( 'idx = ' + idx );
 
           obj = getBusyOverlay( 'viewport', {color:'black', opacity:0.5, text:'処理中・・', style:'text-decoration:blink; font-weight:bold; font-size:12px; color:white;' } );
           $.ajax({
-            url: '/api/infobyparentandchoice?parent_id=' + current_id + '&choice_idx=' + choice_idx,
+            url: '/api/infobyparentandchoice?parent_id=' + current_id + '&choice_idx=' + idx,
             type: 'GET',
             success: function( result ){
               obj.remove();
-              console.log( result );
               if( result.status && result.result ){
                 current_id = result.result.id;
                 board = result.result.board;
@@ -179,6 +178,7 @@ function render_board(){
   }
 }
 
+//. 初期状態のこの処理をどうするか？
 function render_ai( info ){
   // info = [ { id, id, choice_idx: choice_idx, choice_x: choice_x, choice_y: choice_y, board: board, value: v } ]
   $('#ai_info').html( '' );
@@ -186,10 +186,57 @@ function render_ai( info ){
     selectable = [];
     for( var i = 0; i < info.length; i ++ ){
       selectable.push( { x: info[i].choice_x, y: info[i].choice_y, idx: info[i].choice_idx } );
-      $('#board_' + info[i].choice_x + '-' + info[i].choice[y]).attr( 'title', info[i].value );
-      $('#board_' + info[i].choice_x + '-' + info[i].choice[y]).attr( 'next_player', info[i].next_player );
+      $('#board_' + info[i].choice_x + '-' + info[i].choice_y).attr( 'title', info[i].value );
+      //$('#board_' + info[i].choice_x + '-' + info[i].choice_y).attr( 'next_player', info[i].next_player );
     }
   }
+}
+
+function init_render_ai(){
+  $.ajax({
+    url: '/api/rootinfo?board_size=<%= board_size %>',
+    type: 'GET',
+    success: function( result ){
+      if( result && result.status && result.result ){
+        current_id = result.result.id;
+        var n = result.result.next_choices_num;
+        var cnt = 0;
+        var success_cnt = 0;
+        var info = [];
+        for( var i = 0; i < n; i ++ ){
+          $.ajax({
+            url: '/api/infobyparentandchoice?parent_id=' + current_id + '&choice_idx=' + i,
+            type: 'GET',
+            success: function( r ){
+              cnt ++;
+              if( r && r.status && r.result ){
+                success_cnt ++;
+                info.push( r.result );
+              }
+
+              if( cnt == n ){
+                if( success_cnt == n ){
+                  render_ai( info );
+                }else{
+                  alert( 'failed to retrieve root information.' );
+                }
+              }
+            },
+            error: function( e0, e1, e2 ){
+              console.log( e0, e1, e2 );
+              cnt ++;
+              if( cnt == n ){
+                alert( 'failed to retrieve root information.' );
+              }
+            }
+          });
+        }
+      }
+    },
+    error: function( e0, e1, e2 ){
+      console.log( e0, e1, e2 );
+    }
+  });
 }
 </script>
 </head>
