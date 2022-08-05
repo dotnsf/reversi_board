@@ -155,18 +155,20 @@ function render_board( is_first ){
                 player0_count = result.result.player0_count;
                 player1_count = result.result.player1_count;
 
+                render_board();
                 if( next_player != 0 ){
-                  render_board();
                   values_by_choice();
                 }else{
                   //. 終了
-                  if( player0_count == player1_count ){
-                    alert( '引き分け' );
-                  }else if( player0_count > player1_count ){
-                    alert( '●先手勝ち' );
-                  }else{
-                    alert( '○後手勝ち' );
-                  }
+                  setTimeout( function(){
+                    if( player0_count == player1_count ){
+                      alert( '引き分け' );
+                    }else if( player0_count > player1_count ){
+                      alert( '●先手勝ち' );
+                    }else{
+                      alert( '○後手勝ち' );
+                    }
+                  }, 500 );
                 }
               }else{
                 console.log( 'GET /api/infobyparentandchoice failed.' );
