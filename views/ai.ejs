@@ -82,11 +82,8 @@ function values_by_choice(){
     type: 'POST',
     data: { board: JSON.stringify( board ), next_player: next_player },
     success: function( result ){
-      console.log( result );
       if( result.status ){
         if( result.records ){
-          // result.records = [ { id, id, choice_idx: choice_idx, choice_x: choice_x, choice_y: choice_y, board: board, value: v } ]
-          //. render_board();
           render_ai( result.records );
         }else{
           console.log( 'POST /api/reversi/values_by_choice failed.' );
@@ -94,12 +91,13 @@ function values_by_choice(){
       }
     },
     error: function( e0, e1, e2 ){
+      //. ゲーム終了後、ここに来てしまう
       console.log( e0, e1, e2 );
     }
   });
 }
 
-function render_board(){
+function render_board( is_first ){
   $('#players_info').html( '' );
   $('#board_info').html( '' );
 
@@ -130,22 +128,20 @@ function render_board(){
         var x = parseInt( id.substring( t2 + 1 ) );
         //console.log( x, y );
 
-        var idx = -1;
         var choice_idx = -1;
-        var choice_id = '';
-        for( var i = 0; i < selectable.length && idx == -1; i ++ ){
+        //var choice_id = '';
+        for( var i = 0; i < selectable.length && choice_idx == -1; i ++ ){
           if( selectable[i].x == x && selectable[i].y == y ){
-            idx = i;
-            choice_idx = selectable[i].choice_idx;
+            choice_idx = selectable[i].idx;
           }
         }
-        if( idx > -1 ){
+        if( choice_idx > -1 ){
           //. [ x, y ] (choice_idx) を選択
           //console.log( 'idx = ' + idx );
 
           obj = getBusyOverlay( 'viewport', {color:'black', opacity:0.5, text:'処理中・・', style:'text-decoration:blink; font-weight:bold; font-size:12px; color:white;' } );
           $.ajax({
-            url: '/api/infobyparentandchoice?parent_id=' + current_id + '&choice_idx=' + idx,
+            url: '/api/infobyparentandchoice?parent_id=' + current_id + '&choice_idx=' + choice_idx,
             type: 'GET',
             success: function( result ){
               obj.remove();
@@ -159,8 +155,19 @@ function render_board(){
                 player0_count = result.result.player0_count;
                 player1_count = result.result.player1_count;
 
-                render_board();
-                values_by_choice();
+                if( next_player != 0 ){
+                  render_board();
+                  values_by_choice();
+                }else{
+                  //. 終了
+                  if( player0_count == player1_count ){
+                    alert( '引き分け' );
+                  }else if( player0_count > player1_count ){
+                    alert( '●先手勝ち' );
+                  }else{
+                    alert( '○後手勝ち' );
+                  }
+                }
               }else{
                 console.log( 'GET /api/infobyparentandchoice failed.' );
               }
@@ -186,7 +193,8 @@ function render_ai( info ){
     selectable = [];
     for( var i = 0; i < info.length; i ++ ){
       selectable.push( { x: info[i].choice_x, y: info[i].choice_y, idx: info[i].choice_idx } );
-      $('#board_' + info[i].choice_x + '-' + info[i].choice_y).attr( 'title', info[i].value );
+      $('#board_' + info[i].choice_y + '-' + info[i].choice_x).attr( 'title', info[i].value );
+      //$('#board_' + info[i].choice_x + '-' + info[i].choice_y).attr( 'title', info[i].value );
       //$('#board_' + info[i].choice_x + '-' + info[i].choice_y).attr( 'next_player', info[i].next_player );
     }
   }

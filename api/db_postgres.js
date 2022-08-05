@@ -923,7 +923,8 @@ api.getValuesByChoice = async function( board, next_player ){
         conn = await pg.connect();
         if( conn ){
           try{
-            var sql = "select id, choice_idx, choice_x, choice_y, board, value, next_player from reversi where parent_id = ( select id from reversi where board = $1 and next_player = $2 and value_status > 0 ) order by choice_idx";
+            //. "error: more than one row returned by a subquery used as an expression."
+            var sql = "select id, choice_idx, choice_x, choice_y, board, value, next_player from reversi where parent_id in ( select id from reversi where board = $1 and next_player = $2 and value_status > 0 ) order by choice_idx";
             var query = { text: sql, values: [ board, next_player ] };
             conn.query( query, function( err, result0 ){
               if( err ){
