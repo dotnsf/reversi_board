@@ -96,7 +96,7 @@ async function nextProcess(){
             }
           }else if( body0.client == 'analytics' ){
             console.log( 'analytics' );
-            process.exit( 0 );
+            var r = JSON.parse( JSON.stringify( body0 ) );
             if( r && r.status ){
               if( r.parent && r.children ){
                 var parent = body0.parent;
@@ -134,13 +134,13 @@ async function nextProcess(){
                     }
                   });
                 }else{
-                  resolve( { status: false, error: 'failed to get parent and/or children.' } );
+                  resolve( { status: false, error: 'failed to get children.' } );
                 }
               }else{
-                
+                resolve( { status: false, error: 'failed to get parent and/or children.' } );
               }
             }else{
-
+              resolve( { status: false, error: 'failed to get analytics board.' } );
             }
           }else{
             resolve( { status: false, error: r0 } );

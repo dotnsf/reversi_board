@@ -822,8 +822,7 @@ api.getTarget = async function( board_size ){
 api.updateTarget = async function( id, value ){
   return new Promise( async ( resolve, reject ) => {
     if( pg ){
-      console.log( id, value0, value1 );
-      if( id != null && value0 != null & value1 != null ){
+      if( id != null && value != null ){
         conn = await pg.connect();
         if( conn ){
           try{
@@ -1034,12 +1033,15 @@ api.put( '/reversi/target', async function( req, res ){
   if( req.body.id ){
     id = req.body.id;
   }
-  if( req.body.value ){
-    var _value = req.body.value;
+  if( 'value' in req.body ){
+    value = req.body.value;
+    /*
     try{
-      value = parseInt( _value );
+      value = parseInt( value );
     }catch( e ){
+      console.log( { e } );
     }
+    */
   }
 
   api.updateTarget( id, value ).then( function( result ){
