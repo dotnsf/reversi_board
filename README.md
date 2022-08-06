@@ -88,11 +88,28 @@ We should check if result of this SQL would be always **0**:
 
   `select count(*) from reversi where ( depth + 4 < player0_count + player1_count ) or ( depth + next_choices_num > ( board_size * board_size - 4 ) );`
 
-## 現時点での問題点
 
-- [ ] `select count(*) from reversi where depth=9 and next_choices_num > 3` を満たすレコードが存在している？
+## Dockerize
 
-  - `depth=9` ならば残りマスは３のはず、でも選択肢(`next_choices_num`)が４以上？？
+- app
+
+  - build image
+
+    - `$ docker build -t dotnsf/reversi-app -f Dockerfile.app`
+
+  - run as container
+
+    - `$ docker run --name reversi-app -d -p 8080:8080 dotnsf/reversi-app`
+
+- bot
+
+  - build image
+
+    - `$ docker build -t dotnsf/reversi-bot -f Dockerfile.bot`
+
+  - run as container
+
+    - `$ docker run -it -e BOARD_SIZE=6 -e BASE_URL=http://localhost:8080 dotnsf/reversi-bot`
 
 
 ## Licensing
