@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reversi-bot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: reversi-bot
+  template:
+    metadata:
+      labels:
+        app: reversi-bot
+    spec:
+      containers:
+      - name: reversi-bot
+        image: dotnsf/reversi-bot
+        env:
+        - name: BASE_URL
+          value: "http://reversi-app-server:30123"
+        - name: BOARD_SIZE
+          value: "4"

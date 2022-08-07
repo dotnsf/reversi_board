@@ -83,7 +83,7 @@ We should check if result of this SQL would be always **0**:
   `select count(*) from reversi where ( depth + 4 < player0_count + player1_count ) or ( depth + next_choices_num > ( board_size * board_size - 4 ) );`
 
 
-## Dockerize
+## Containerize in docker
 
 - network(optional)
 
@@ -110,6 +110,23 @@ We should check if result of this SQL would be always **0**:
   - run as container
 
     - `$ docker run --network reversi-network -e BOARD_SIZE=4 -e BASE_URL=http://reversi-app:8080 dotnsf/reversi-bot`
+
+
+## Containerize in k8s
+
+- app
+
+  - Edit `revesi-app.yaml` with your `DATABASE_URL` and `BOARD_SIZE`.
+
+  - `$ kubectl apply -f reversi-app.yaml`
+
+- bot
+
+  - Edit `revesi-bot.yaml` with your `BASE_URL` and `BOARD_SIZE`.
+
+  - `$ kubectl apply -f reversi-bot.yaml`
+
+  - `$ kubectl scale --replicas=3 -f reversi-bot.yaml`
 
 
 ## Licensing
