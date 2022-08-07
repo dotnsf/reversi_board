@@ -44,12 +44,8 @@ html, body{
 <script>
 var next_player = 1;
 var current_id = '';
-var board = [
-  [  0,  0,  0,  0 ],
-  [  0,  1, -1,  0 ],
-  [  0, -1,  1,  0 ],
-  [  0 , 0,  0,  0 ]
-];
+var board_size = <%= board_size %>;
+var board = [];
 var player0_count = 2;
 var player1_count = 2;
 var pcs = [ '○', '・', '●' ];
@@ -57,6 +53,20 @@ var selectable = [];
 
 var obj = null;
 $(function(){
+  for( var i = 0; i < board_size; i ++ ){
+    var line = [];
+    for( var j = 0; j < board_size; j ++ ){
+      line.push( 0 );
+    }
+    board.push( line );
+  }
+
+  var pv = board_size / 2;
+  board[pv][pv] = 1;
+  board[pv-1][pv-1] = 1;
+  board[pv-1][pv] = -1;
+  board[pv][pv-1] = -1;
+
   obj = getBusyOverlay( 'viewport', {color:'black', opacity:0.5, text:'処理中・・', style:'text-decoration:blink; font-weight:bold; font-size:12px; color:white;' } );
   $.ajax({
     url: '/api/rootinfo?board_size=<%= board_size %>',

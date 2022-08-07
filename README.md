@@ -22,6 +22,8 @@
 
   - `BOARD_SIZE` : Size of game board. (Default:4)
 
+  - `PGSSLMODE` : SSL connection mode for PostgreSQL. (Default:'no-verify', specify 'disable' for PosgreSQL docker container)
+
 
 ### Client bot
 
