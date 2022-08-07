@@ -36,6 +36,7 @@
   - `BASE_URL` : Base URL of above server. (Default:http://localhost:8080)
 
 
+<!--
 ### Analytics client
 
 - CLI: 
@@ -47,6 +48,7 @@
   - `DATABASE_URL` : URL of PostgreSQL
 
   - `BOARD_SIZE` : Size of game board. (Default:4)
+-->
 
 
 ## Order
@@ -55,27 +57,19 @@
 
   - `=> \i reversi.ddl`
 
-2. Run bot:
+2. Run app:
 
-  - `$ node bot`
+  - `$ DATABASE_URL=postgres://localhost:5432/db BOARD_SIZE=4 node app`
 
-3. Run SQL which set values:
+3. Run bot:
 
-  - `update reversi set value = ( player0_count - player1_count ) where next_choices_num = 0`
+  - `$ BASE_URL=http://localhost:8080 BOARD_SIZE=4 node bot`
 
-4. Backup DB as `before analytics`:
+4. Backup DB:
 
-  - `# pg_dump "postgres://postgres:passworrd@xxxx:5432/db" -f yyyymmdd_reversi_before_analytics.dump`
+  - `# pg_dump "postgres://postgres:passworrd@xxxx:5432/db" -f yyyymmdd_reversi.dump`
 
-  - `# pg_dump "postgres://postgres:passworrd@xxxx:5432/db" -Fc -f yyyymmdd_reversi_before_analytics-Fc.dump`
-
-5. Run analytics:
-
-  - `$ node analytics`
-
-6. Backup DB as `after analytics`:
-
-  - `# pg_dump "postgres://postgres:passworrd@xxxx:5432/db" -f yyyymmdd_reversi_after_analytics.dump`
+  - `# pg_dump "postgres://postgres:passworrd@xxxx:5432/db" -Fc -f yyyymmdd_reversi-Fc.dump`
 
 7. If needed, you can restore DB with following command:
 
@@ -91,25 +85,31 @@ We should check if result of this SQL would be always **0**:
 
 ## Dockerize
 
+- network(optional)
+
+  - create network
+
+    - `$ docker network create reversi-network`
+
 - app
 
   - build image
 
-    - `$ docker build -t dotnsf/reversi-app -f Dockerfile.app`
+    - `$ docker build -t dotnsf/reversi-app -f Dockerfile.app .`
 
   - run as container
 
-    - `$ docker run --name reversi-app -d -p 8080:8080 dotnsf/reversi-app`
+    - `$ docker run --name reversi-app --network reversi-network -d -p 8080:8080 -e BOARD_SIZE=4 -e DATABASE_URL=postgres://localhost:5432/db dotnsf/reversi-app`
 
 - bot
 
   - build image
 
-    - `$ docker build -t dotnsf/reversi-bot -f Dockerfile.bot`
+    - `$ docker build -t dotnsf/reversi-bot -f Dockerfile.bot .`
 
   - run as container
 
-    - `$ docker run -it -e BOARD_SIZE=6 -e BASE_URL=http://localhost:8080 dotnsf/reversi-bot`
+    - `$ docker run --network reversi-network -e BOARD_SIZE=4 -e BASE_URL=http://reversi-app:8080 dotnsf/reversi-bot`
 
 
 ## Licensing
