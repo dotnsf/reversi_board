@@ -9,7 +9,9 @@ var express = require( 'express' ),
 
 var Reversi = require( '../public/reversi' );
 
-process.env.PGSSLMODE = 'no-verify';
+if( !process.env.PGSSLMODE ){
+  process.env.PGSSLMODE = 'no-verify';
+}
 var PG = require( 'pg' );
 const reversi = require('../public/reversi');
 PG.defaults.ssl = true;
