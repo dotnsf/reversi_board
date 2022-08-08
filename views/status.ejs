@@ -40,9 +40,65 @@ html, body{
   border-style: solid; 
   border-color: #f00; 
 }
+.acd-check{
+  display: none;
+}
+.acd-label{
+  background: #333;
+  color: #fff;
+  display: block;
+  margin-bottom: 1px;
+  padding: 10px;
+}
+.acd-content{
+  border: 1px solid #333;
+  height: 0;
+  opacity: 0;
+  padding: 0 10px;
+  transition: .5s;
+  visibility: hidden;
+}
+.acd-check:checked + .acd-label + .acd-content{
+  height: 40px;
+  opacity: 1;
+  padding: 10px;
+  visibility: visible;
+}
 </style>
 <script>
 $(function(){
+  $.ajax({
+    url: '/api/dbstatus',
+    type: 'GET',
+    success: function( result ){
+      if( result.status ){
+        if( result.results && result.results.length ){
+          var tbl = '<table class="table table-bordered">'
+            + '<tr><th>depth</th><th>value_status</th><th>count</th></tr>';
+          for( var i = 0; i < result.results.length; i ++ ){
+            var d = result.results[i]; //. { depth: 0, value_status: 0, count: '1' }
+            if( typeof d.count == 'string' ){
+              d.count = parseInt( d.count );
+            }
+            var tr = '<tr>'
+              + '<td>' + d.depth + '</td>'
+              + '<td>' + d.value_status + '</td>'
+              + '<td>' + d.count + '</td>'
+              + '</tr>';
+            tbl += tr;
+          }
+          tbl += '</table>';
+          $('#db-status').html( tbl );
+        }else{
+          console.log( 'GET /api/dbstatus failed.' );
+        }
+      }
+    },
+    error: function( e0, e1, e2 ){
+      console.log( e0, e1, e2 );
+    }
+  });
+
 <% if( id ){ %>
   $.ajax({
     url: '/api/infobyid?board_size=<%= board_size %>&id=<%= id %>',
@@ -282,6 +338,13 @@ function render_info( info ){
   <div><pre id="info_div">
   </pre></div>
 
+</div>
+
+<div class="container">
+  <input id="acd-check1" class="acd-check" type="checkbox"/>
+  <label class="acd-label" for="acd-check1">DB ステータス</label>
+  <div class="acd-content" id="db-status">
+  </div>
 </div>
 
 </html>

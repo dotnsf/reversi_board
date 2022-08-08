@@ -959,6 +959,44 @@ api.getValuesByChoice = async function( board, next_player ){
   });
 };
 
+//. #28
+api.getStatusValues = async function(){
+  return new Promise( async ( resolve, reject ) => {
+    if( pg ){
+      conn = await pg.connect();
+      if( conn ){
+        try{
+          var sql = "select depth, value_status, count(*) as count from reversi group by depth, value_status order by depth, value_status";
+          var query = { text: sql, values: [] };
+          conn.query( query, function( err, result ){
+            if( err ){
+              console.log( err );
+              resolve( { status: false, error: err } );
+            }else{
+              if( result.rows.length > 0 ){
+                resolve( { status: true, results: result.rows } );
+              }else{
+                resolve( { status: false, error: 'no records found.' } );
+              }
+            }
+          });
+        }catch( e ){
+          console.log( e );
+          resolve( { status: false, error: err } );
+        }finally{
+          if( conn ){
+            conn.release();
+          }
+        }
+      }else{
+        resolve( { status: false, error: 'db not ready.' } );
+      }
+    }else{
+      resolve( { status: false, error: 'no connection.' } );
+    }
+  });
+};
+
 
 api.post( '/reversi/start_process', async function( req, res ){
   res.contentType( 'application/json; charset=utf-8' );
@@ -1229,6 +1267,17 @@ api.get( '/infobyid', async function( req, res ){
     res.write( JSON.stringify( { status: false, error: 'parameter both id is mandatory.' }, null, 2 ) );
     res.end();
   }
+});
+
+//. #28
+api.get( '/dbstatus', async function( req, res ){
+  res.contentType( 'application/json; charset=utf-8' );
+
+  api.getStatusValues().then( function( result ){
+    res.status( result.status ? 200 : 400 );
+    res.write( JSON.stringify( result, null, 2 ) );
+    res.end();
+  });
 });
 
 

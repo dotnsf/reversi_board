@@ -153,6 +153,81 @@ paths:
           description: 成功
         '400':
           description: エラー
+  /rootinfo:
+    get:
+      tags:
+        - reversi
+      summary: 初期レコード情報
+      description: 初期レコード情報
+      produces:
+        - application/json
+      parameters:
+        - name: board_size
+          type: integer
+          in: query
+          description: ボードサイズ
+          required: true
+      responses:
+        '200':
+          description: 成功
+        '400':
+          description: エラー
+  /infobyparentandchoice:
+    get:
+      tags:
+        - reversi
+      summary: レコード情報
+      description: レコード情報
+      produces:
+        - application/json
+      parameters:
+        - name: parend_id
+          type: string
+          in: query
+          description: 親ID
+          required: true
+        - name: choice_idx
+          type: integer
+          in: query
+          description: 選択インデックス
+          required: true
+      responses:
+        '200':
+          description: 成功
+        '400':
+          description: エラー
+  /infobyid:
+    get:
+      tags:
+        - reversi
+      summary: レコード情報
+      description: レコード情報
+      produces:
+        - application/json
+      parameters:
+        - name: id
+          type: string
+          in: query
+          description: データID
+          required: true
+      responses:
+        '200':
+          description: 成功
+        '400':
+          description: エラー
+  /dbstatus:
+    get:
+      tags:
+        - reversi
+      summary: DBステータス
+      description: DBステータス
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: 成功
+        '400':
+          description: エラー
 definitions:
   ChoiceRequest:
     type: object
