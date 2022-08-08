@@ -138,7 +138,18 @@ api.createReversis = function( reversis ){
             params.push( [ reversis[i].id, reversis[i].parent_id, reversis[i].board_size, reversis[i].depth, reversis[i].choice_idx, reversis[i].choice[0], reversis[i].choice[1], JSON.stringify( reversis[i].board ), JSON.stringify( reversis[i].next_choices ), reversis[i].next_choices_num, reversis[i].next_processed_num, reversis[i].player0_count, reversis[i].player1_count, reversis[i].next_player, reversis[i].value, reversis[i].value_status, reversis[i].created, reversis[i].updated ] );
           }
 
-          var sql = format( 'insert into reversi( id, parent_id, board_size, depth, choice_idx, choice_x, choice_y, board, next_choices, next_choices_num, next_processed_num, player0_count, player1_count, next_player, value, value_status, created, updated ) values %L', params );
+          //. #30
+          //var sql = format( 'insert into reversi( id, parent_id, board_size, depth, choice_idx, choice_x, choice_y, board, next_choices, next_choices_num, next_processed_num, player0_count, player1_count, next_player, value, value_status, created, updated ) values %L', params );
+          var sql = 'insert into reversi( id, parent_id, board_size, depth, choice_idx, choice_x, choice_y, board, next_choices, next_choices_num, next_processed_num, player0_count, player1_count, next_player, value, value_status, created, updated )';
+          for( var i = 0; i < reversis.length; i ++ ){
+            var select = " select '" + reversis[i].id + "', '" + reversis[i].parent_id + "', " + reversis[i].board_size + ", " + reversis[i].depth + ", " + reversis[i].choice_idx + ", " + reversis[i].choice[0] + ", " + reversis[i].choice[1] + ", '" + JSON.stringify( reversis[i].board ) + "', '" + JSON.stringify( reversis[i].next_choices ) + "', " + reversis[i].next_choices_num + ", " + reversis[i].next_processed_num + ", " + reversis[i].player0_count + ", " + reversis[i].player1_count + ", " + reversis[i].next_player + ", " + ( reversis[i].value ? reversis[i].value : 0 ) + ", " + reversis[i].value_status + ", " + reversis[i].created + ", " + reversis[i].updated;
+            if( i < reversis.length - 1 ){
+              select += " union all";
+            }
+            sql += select;
+          }
+          sql += " on conflict ( parent_id, board, next_player ) do nothing";
+
           conn.query( sql, [], function( err, result ){
             if( err ){
               //. "error: duplicate key value violates unique constraint "reversi_pkey""" ??
