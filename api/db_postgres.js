@@ -72,7 +72,7 @@ api.createReversi = async function( reversi ){
       conn = await pg.connect();
       if( conn ){
         try{
-          var sql = 'insert into reversi( id, parent_id, board_size, depth, choice_idx, choice_x, choice_y, board, next_choices, next_choices_num, next_processed_num, player0_count, player1_count, next_player, value, value_status, created, updated ) values ( $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18 )';
+          var sql = 'insert into reversi( parent_id, next_id, next_idx, board_size, depth, board, boards, next_choices, next_choices_num, process_status, player0_count, player1_count, next_player, value, value_status, created, updated ) values ( $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17 )';
           if( !reversi.id ){
             reversi.id = generateUUID(); //uuidv4();
           }
@@ -83,11 +83,14 @@ api.createReversi = async function( reversi ){
             reversi.value = reversi.player0_count - reversi.player1_count;
             reversi.value_status = 1;
           }else{
-            reversi.value = null;
+            reversi.value = 0;
             reversi.value_status = 0;
           }
           //console.log( reversi );
-          var query = { text: sql, values: [ reversi.id, reversi.parent_id, reversi.board_size, reversi.depth, reversi.choice_idx, reversi.choice[0], reversi.choice[1], JSON.stringify( reversi.board ), JSON.stringify( reversi.next_choices ), reversi.next_choices_num, reversi.next_processed_num, reversi.player0_count, reversi.player1_count, reversi.next_player, reversi.value, reversi.value_status, reversi.created, reversi.updated ] };
+          if( typeof reversi.board == 'object' ){ reversi.board = JSON.stringify( reversi.board ); }
+          if( typeof reversi.boards == 'object' ){ reversi.boards = JSON.stringify( reversi.boards ); }
+          if( typeof reversi.next_choices == 'object' ){ reversi.next_choices = JSON.stringify( reversi.next_choices ); }
+          var query = { text: sql, values: [ reversi.parent_id, reversi.next_id, reversi.next_idx, reversi.board_size, reversi.depth, reversi.board, reversi.boards, reversi.next_choices, reversi.next_choices_num, reversi.process_status, reversi.player0_count, reversi.player1_count, reversi.next_player, reversi.value, reversi.value_status, reversi.created, reversi.updated ] };
           conn.query( query, function( err, result ){
             if( err ){
               console.log( err );
@@ -121,9 +124,6 @@ api.createReversis = function( reversis ){
         try{
           var params = [];
           for( var i = 0; i < reversis.length; i ++ ){
-            if( !reversis[i].id ){
-              reversis[i].id = generateUUID(); //uuidv4();
-            }
             var t = ( new Date() ).getTime();
             reversis[i].created = t;
             reversis[i].updated = t;
@@ -135,14 +135,18 @@ api.createReversis = function( reversis ){
               reversis[i].value_status = 0;
             }
 
-            params.push( [ reversis[i].id, reversis[i].parent_id, reversis[i].board_size, reversis[i].depth, reversis[i].choice_idx, reversis[i].choice[0], reversis[i].choice[1], JSON.stringify( reversis[i].board ), JSON.stringify( reversis[i].next_choices ), reversis[i].next_choices_num, reversis[i].next_processed_num, reversis[i].player0_count, reversis[i].player1_count, reversis[i].next_player, reversis[i].value, reversis[i].value_status, reversis[i].created, reversis[i].updated ] );
+            if( typeof reversis[i].board == 'object' ){ reversis[i].board = JSON.stringify( reversis[i].board ); }
+            if( typeof reversis[i].boards == 'object' ){ reversis[i].boards = JSON.stringify( reversis[i].boards ); }
+            if( typeof reversis[i].next_choices == 'object' ){ reversis[i].next_choices = JSON.stringify( reversis[i].next_choices ); }
+
+            params.push( [ reversis[i].parent_id, reversis[i].next_id, reversis[i].next_idx, reversis[i].board_size, reversis[i].depth, reversis[i].board, reversis[i].boards, reversis[i].next_choices, reversis[i].next_choices_num, reversis[i].process_status, reversis[i].player0_count, reversis[i].player1_count, reversis[i].next_player, reversis[i].value, reversis[i].value_status, reversis[i].created, reversis[i].updated ] );
           }
 
           //. #30
           //var sql = format( 'insert into reversi( id, parent_id, board_size, depth, choice_idx, choice_x, choice_y, board, next_choices, next_choices_num, next_processed_num, player0_count, player1_count, next_player, value, value_status, created, updated ) values %L', params );
-          var sql = 'insert into reversi( id, parent_id, board_size, depth, choice_idx, choice_x, choice_y, board, next_choices, next_choices_num, next_processed_num, player0_count, player1_count, next_player, value, value_status, created, updated )';
+          var sql = 'insert into reversi( parent_id, next_id, next_idx, board_size, depth, board, boards, next_choices, next_choices_num, process_status, player0_count, player1_count, next_player, value, value_status, created, updated )';
           for( var i = 0; i < reversis.length; i ++ ){
-            var select = " select '" + reversis[i].id + "', '" + reversis[i].parent_id + "', " + reversis[i].board_size + ", " + reversis[i].depth + ", " + reversis[i].choice_idx + ", " + reversis[i].choice[0] + ", " + reversis[i].choice[1] + ", '" + JSON.stringify( reversis[i].board ) + "', '" + JSON.stringify( reversis[i].next_choices ) + "', " + reversis[i].next_choices_num + ", " + reversis[i].next_processed_num + ", " + reversis[i].player0_count + ", " + reversis[i].player1_count + ", " + reversis[i].next_player + ", " + ( reversis[i].value ? reversis[i].value : 0 ) + ", " + reversis[i].value_status + ", " + reversis[i].created + ", " + reversis[i].updated;
+            var select = " select " + reversis[i].parent_id + ", " + reversis[i].next_id + ", " + reversis[i].next_idx + ", " + reversis[i].board_size + ", " + reversis[i].depth + ", '" + reversis[i].board + "', '" + reversis[i].boards + "', '" + reversis[i].next_choices + "', " + reversis[i].next_choices_num + ", " + reversis[i].process_status + ", " + reversis[i].player0_count + ", " + reversis[i].player1_count + ", " + reversis[i].next_player + ", " + reversis[i].value + ", " + reversis[i].value_status + ", " + reversis[i].created + ", " + reversis[i].updated;
             if( i < reversis.length - 1 ){
               select += " union all";
             }
@@ -196,6 +200,9 @@ api.readReversi = async function( reversi_id ){
                 if( typeof reversi.board == 'string' ){
                   reversi.board = JSON.parse( reversi.board );
                 }
+                if( typeof reversi.boards == 'string' ){
+                  reversi.boards = JSON.parse( reversi.boards );
+                }
                 if( typeof reversi.next_choices == 'string' ){
                   reversi.next_choices = JSON.parse( reversi.next_choices );
                 }
@@ -244,6 +251,15 @@ api.readReversis = async function( limit, offset ){
               resolve( { status: false, error: err } );
             }else{
               for( var i = 0; i < result.rows.length; i ++ ){
+                if( typeof result.rows[i].board == 'string' ){
+                  result.rows[i].board = JSON.parse( result.rows[i].board );
+                }
+                if( typeof result.rows[i].boards == 'string' ){
+                  result.rows[i].boards = JSON.parse( result.rows[i].boards );
+                }
+                if( typeof result.rows[i].next_choices == 'string' ){
+                  result.rows[i].next_choices = JSON.parse( result.rows[i].next_choices );
+                }
                 result.rows[i].created = parseInt( result.rows[i].created );
                 result.rows[i].updated = parseInt( result.rows[i].updated );
               }
@@ -282,9 +298,10 @@ api.startProcess = async function( board_size ){
                 resolve( { status: false, error: err } );
               }else{
                 if( result.rows.length == 0 ){
-                  var reversi1 = initReversi( board_size );
-                  //console.log( { reversi1 } );
-                  this.createReversi( reversi1 ).then( async function( result ){
+                  var reversi0 = new reversi( null, null, null, null, board_size );
+                  reversi0.initBoard();
+                  //console.log( { reversi0 } );
+                  this.createReversi( reversi0 ).then( async function( result ){
                     if( result && result.status ){
                       resolve( { status: true, created: true } );
                     }else{
@@ -323,7 +340,7 @@ api.nextProcess = async function( board_size ){
       if( conn ){
         try{
           //. #14
-          var sql = "select * from reversi where board_size = $1 and next_processed_num < 1 limit 1";
+          var sql = "select * from reversi where board_size = $1 and process_status < 1 limit 1";
           var query = { text: sql, values: [ board_size ] };
           conn.query( query, async ( err, result ) => {
             if( err ){
@@ -338,10 +355,10 @@ api.nextProcess = async function( board_size ){
                 resolve( r0 );
               }else{
                 //. bot.js
-                //. 特定の board_size 値を持っているレコードの中で、 ( next_processed_num = 0 || ( next_processed_num = -1 && updated + 60000 < t ) を満たしているレコードを探す
+                //. 特定の board_size 値を持っているレコードの中で、 ( process_status = 0 || ( process_status = -1 && updated + 60000 < t ) を満たしているレコードを探す
                 //. order by depth, updated で最初の１件が欲しい
                 var t = ( new Date() ).getTime();
-                var sql = "select * from reversi where board_size = $1 and next_choices_num > 0 and ( next_processed_num = 0 or ( next_processed_num = -1 and updated + 60000 < $2 ) ) order by depth, updated limit 1";
+                var sql = "select * from reversi where board_size = $1 and next_choices_num > 0 and ( process_status = 0 or ( process_status = -1 and updated + 60000 < $2 ) ) order by depth, updated limit 1";
                 var query = { text: sql, values: [ board_size, t ] };
                 conn.query( query, ( err, result ) => {
                   if( err ){
@@ -363,8 +380,8 @@ api.nextProcess = async function( board_size ){
                             r.client = 'bot';
                             resolve( r );
                           }else{
-                            //. 解析終了、だと思うが、next_processed_num = -1 のままのケースが考えられる。１分後に再処理すべき？
-                            sql = "select * from reversi where board_size = $1 and next_choices_num > 0 and next_processed_num = -1 order by depth, updated limit 1";
+                            //. 解析終了、だと思うが、process_status = -1 のままのケースが考えられる。１分後に再処理すべき？
+                            sql = "select * from reversi where board_size = $1 and next_choices_num > 0 and process_status = -1 order by depth, updated limit 1";
                             query = { text: sql, values: [ board_size ] };
                             conn.query( query, async ( err, result ) => {
                               if( err ){
@@ -377,8 +394,8 @@ api.nextProcess = async function( board_size ){
                                 }else{
                                   //. 見つかった
                                   var r0 = result.rows[0];   
-                                  var reversi0 = new Reversi( r0.id, r0.parent_id, r0.depth, r0.choice_idx, [ -1, -1 ], JSON.parse( r0.board ), r0.next_player );
-                                  reversi0.next_processed_num = r0.next_processed_num;
+                                  var reversi0 = new Reversi( r0.id, r0.parent_id, r0.next_id, r0.next_idx, r0.board_size, r0.depth, r0.board, r0.boards, r0.next_player );
+                                  //reversi0.process_status = r0.process_status;
                                   reversi0.changeStatus( -1 );
 
                                   //. 見つかった状態の reversi0 を返す
@@ -391,10 +408,10 @@ api.nextProcess = async function( board_size ){
                       });
                     }else{
                       var r0 = result.rows[0];   
-                      var reversi0 = new Reversi( r0.id, r0.parent_id, r0.depth, r0.choice_idx, [ -1, -1 ], JSON.parse( r0.board ), r0.next_player );
-                      reversi0.next_processed_num = r0.next_processed_num;
+                      var reversi0 = new Reversi( r0.id, r0.parent_id, r0.next_id, r0.next_idx, r0.board_size, r0.depth, r0.board, r0.boards, r0.next_player );
+                      //reversi0.next_processed_num = r0.next_processed_num;
                       reversi0.changeStatus( -1 );
-                      this.updateReversi( reversi0.id, reversi0.next_processed_num ).then( function( result ){
+                      this.updateReversi( reversi0.id, reversi0.process_status ).then( function( result ){
                         if( result && result.status ){
                           //. この状態の reversi0 を返す
                           resolve( { status: true, client: 'bot', result: reversi0 } );
@@ -440,13 +457,9 @@ api.updateProcess = async function( reversis ){
                   var r = await this.readReversi( id );
                   if( r && r.status ){
                     var r0 = r.result;
-                    if( typeof r0.board == 'string' ){
-                      r0.board = JSON.parse( r0.board );
-                    }
-                    var reversi0 = new Reversi( r0.id, r0.parent_id, r0.depth, r0.choice_idx, [ -1, -1 ], JSON.parse( JSON.stringify( r0.board ) ), r0.next_player );
-                    reversi0.next_processed_num = r0.next_processed_num;
+                    var reversi0 = new Reversi( r0.id, r0.parent_id, r0.next_id, r0.next_idx, r0.board_size, r0.depth, r0.board, r0.boards, r0.next_player );
                     reversi0.changeStatus( 1 );
-                    this.updateReversi( reversi0.id, reversi0.next_processed_num ).then( function( result ){
+                    this.updateReversi( reversi0.id, reversi0.process_status ).then( function( result ){
                       if( result && result.status ){
                         resolve( { status: true, result: reversi0 } );
                       }else{
@@ -485,7 +498,7 @@ api.updateProcess = async function( reversis ){
 };
 
 //. Update
-api.updateReversi = async function( reversi_id, reversi_next_processed_num ){
+api.updateReversi = async function( reversi_id, reversi_process_status ){
   return new Promise( async ( resolve, reject ) => {
     if( pg ){
       conn = await pg.connect();
@@ -494,9 +507,9 @@ api.updateReversi = async function( reversi_id, reversi_next_processed_num ){
           resolve( { status: false, error: 'no id.' } );
         }else{
           try{
-            var sql = 'update reversi set next_processed_num = $1, updated = $2 where id = $3';
+            var sql = 'update reversi set process_status = $1, updated = $2 where id = $3';
             var t = ( new Date() ).getTime();
-            var query = { text: sql, values: [ reversi_next_processed_num, t, reversi_id ] };
+            var query = { text: sql, values: [ reversi_process_status, t, reversi_id ] };
             conn.query( query, function( err, result ){
               if( err ){
                 console.log( err );
@@ -619,8 +632,17 @@ api.readRoot = async function( board_size ){
                     if( typeof reversi0.board == 'string' ){
                       reversi0.board = JSON.parse( reversi0.board );
                     }
+                    if( typeof reversi0.boards == 'string' ){
+                      reversi0.boards = JSON.parse( reversi0.boards );
+                    }
                     if( typeof reversi0.next_choices == 'string' ){
                       reversi0.next_choices = JSON.parse( reversi0.next_choices );
+                    }
+                    if( typeof reversi0.created == 'string' ){
+                      reversi0.created = parseInt( reversi0.created );
+                    }
+                    if( typeof reversi0.updated == 'string' ){
+                      reversi0.updated = parseInt( reversi0.updated );
                     }
                     reversi0.next_choices_num = reversi0.next_choices.length;
                     resolve( { status: true, result: reversi0 } );
@@ -648,6 +670,7 @@ api.readRoot = async function( board_size ){
   });
 };
 
+//. v0.3.0 では使わない？
 api.readInfo = async function( parent_id, choice_idx ){
   return new Promise( async ( resolve, reject ) => {
     if( pg ){
@@ -728,8 +751,17 @@ api.readInfoById = async function( id ){
                     if( typeof reversi0.board == 'string' ){
                       reversi0.board = JSON.parse( reversi0.board );
                     }
+                    if( typeof reversi0.boards == 'string' ){
+                      reversi0.boards = JSON.parse( reversi0.boards );
+                    }
                     if( typeof reversi0.next_choices == 'string' ){
                       reversi0.next_choices = JSON.parse( reversi0.next_choices );
+                    }
+                    if( typeof reversi0.created == 'string' ){
+                      reversi0.created = parseInt( reversi0.created );
+                    }
+                    if( typeof reversi0.updated == 'string' ){
+                      reversi0.updated = parseInt( reversi0.updated );
                     }
                     reversi0.next_choices_num = reversi0.next_choices.length;
                     resolve( { status: true, result: reversi0 } );
@@ -767,7 +799,7 @@ api.getTarget = async function( board_size ){
         if( conn ){
           try{
             var t = ( new Date() ).getTime();
-            var sql = "select id, parent_id, depth, choice_idx, player0_count, player1_count, value, value_status, next_player from reversi where board_size = $1 and depth = ( select max(depth) from reversi where ( value_status = 0 or ( value_status = -2 and updated + 60000 < $2 ) ) ) and ( value_status = 0 or ( value_status = -2 and updated + 60000 < $3 ) ) order by parent_id, choice_idx limit 1";
+            var sql = "select id, parent_id, next_id, next_idx, board_size, depth, board, boards, next_choices, next_choices_num, process_status, player0_count, player1_count, next_player, value, value_status, next_player, created, updated from reversi where board_size = $1 and depth = ( select max(depth) from reversi where ( value_status = 0 or ( value_status = -2 and updated + 60000 < $2 ) ) ) and ( value_status = 0 or ( value_status = -2 and updated + 60000 < $3 ) ) order by parent_id limit 1";
             var query = { text: sql, values: [ board_size, t, t ] };
             conn.query( query, function( err, result0 ){
               if( err ){
@@ -871,6 +903,7 @@ api.updateTarget = async function( id, value ){
 };
 
 //. #17
+//. v0.3.0 では使わない？
 api.getBestChoice = async function( board, next_player ){
   return new Promise( async ( resolve, reject ) => {
     if( pg ){
@@ -878,7 +911,7 @@ api.getBestChoice = async function( board, next_player ){
         conn = await pg.connect();
         if( conn ){
           try{
-            var sql = "select id, choice_idx, choice_x, choice_y, board, value, next_player from reversi where parent_id = ( select id from reversi where board = $1 and next_player = $2 and value_status > 0 limit 1 ) order by choice_idx";
+            var sql = "select * from reversi where parent_id = ( select id from reversi where board = $1 and next_player = $2 and value_status > 0 limit 1 ) order by parent_id";
             var query = { text: sql, values: [ board, next_player ] };
             conn.query( query, function( err, result0 ){
               if( err ){
@@ -888,6 +921,7 @@ api.getBestChoice = async function( board, next_player ){
                 if( result0.rows.length > 0 ){
                   var idx = 0;
                   var v = result0.rows[0].value;
+                  if( typeof v == 'string' ){ v = parseInt( v ); }
                   for( var i = 1; i < result0.rows.length; i ++ ){
                     if( next_player == 1 ){
                       if( result0.rows[i].value > v ){
@@ -928,6 +962,7 @@ api.getBestChoice = async function( board, next_player ){
   });
 };
 
+//. v0.3.0 では使わない？
 api.getValuesByChoice = async function( board, next_player ){
   return new Promise( async ( resolve, reject ) => {
     if( pg ){
@@ -936,7 +971,7 @@ api.getValuesByChoice = async function( board, next_player ){
         if( conn ){
           try{
             //. "error: more than one row returned by a subquery used as an expression."
-            var sql = "select id, choice_idx, choice_x, choice_y, board, value, next_player from reversi where parent_id in ( select id from reversi where board = $1 and next_player = $2 and value_status > 0 ) order by choice_idx";
+            var sql = "select id, choice_idx, choice_x, choice_y, board, value, next_player from reversi where parent_id in ( select id from reversi where board = $1 and next_player = $2 and value_status > 0 ) order by parent_id";
             var query = { text: sql, values: [ board, next_player ] };
             conn.query( query, function( err, result0 ){
               if( err ){
@@ -1038,13 +1073,11 @@ api.post( '/reversi/update_process', async function( req, res ){
   for( var i = 0; i < reversis.length; i ++ ){
     reversis[i].board_size = parseInt( reversis[i].board_size );
     reversis[i].depth = parseInt( reversis[i].depth );
-    reversis[i].choice_idx = parseInt( reversis[i].choice_idx );
-    reversis[i].choice[0] = parseInt( reversis[i].choice[0] );
-    reversis[i].choice[1] = parseInt( reversis[i].choice[1] );
     reversis[i].board = JSON.parse( JSON.stringify( reversis[i].board ).split( '"' ).join( '' ) );
+    reversis[i].boards = JSON.parse( JSON.stringify( reversis[i].boards ).split( '"' ).join( ':' ) );
     reversis[i].next_choices = JSON.parse( JSON.stringify( reversis[i].next_choices ).split( '"' ).join( '' ) );
     reversis[i].next_choices_num = parseInt( reversis[i].next_choices_num );
-    reversis[i].next_processed_num = parseInt( reversis[i].next_processed_num );
+    reversis[i].process_status = parseInt( reversis[i].process_status );
     reversis[i].player0_count = parseInt( reversis[i].player0_count );
     reversis[i].player1_count = parseInt( reversis[i].player1_count );
     reversis[i].next_player = parseInt( reversis[i].next_player );
@@ -1331,6 +1364,16 @@ function generateUUID(){
   did = ( new Date().getTime().toString(16) ) + Math.floor( 10000000 * Math.random() ).toString(16);
 
   return did;
+}
+
+function convertBoards( boards ){
+  var s = [];
+  if( typeof boards == 'string' ){ boards = JSON.parse( boards ); }
+  for( var i = 0; i < boards.length; i ++ ){
+    s.push( JSON.stringify( boards[i] ) );
+  }
+
+  return s.join( ':' );
 }
 
 //. api をエクスポート
