@@ -1,6 +1,6 @@
 //. bot.js
 var request = require( 'request' );
-var reversi = require( './public/reversi' );
+var Reversi = require( './public/reversi' );
 
 var BOARD_SIZE = 4;
 var _BOARD_SIZE = 'BOARD_SIZE' in process.env ? process.env.BOARD_SIZE : ''; 
@@ -69,11 +69,12 @@ async function nextProcess(){
         if( body0 && body0.status && body0.client ){
           if( body0.client == 'bot' ){
             var r0 = body0.result;
-            if( r0 && r0.next_processed_num == -1 ){
+            if( r0 && r0.process_status == -1 ){
               var reversis = [];
               for( var i = 0; i < r0.next_choices.length; i ++ ){
+                var reversi0 = new Reversi( r0.id, r0.parent_id, r0.next_ids, 4, r0.depth, r0.board, null, r0.next_player );
                 var choice = r0.next_choices[i];
-                var reversi1 = new reversi( null, r0.id, r0.depth + 1, i, choice, JSON.parse( JSON.stringify( r0.board ) ), r0.next_player );
+                var reversi1 = reversi0.putChoice( choice.x, choice.y, r0.next_player );
                 reversis.push( reversi1 );
               }
 

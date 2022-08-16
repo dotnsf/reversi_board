@@ -1,15 +1,17 @@
 //. reversi.js
 var reversi = class{
-  constructor( id, parent_id, next_id, next_idx, board_size, depth, board, boards, next_player ){
-    this.id = id;
-    this.parent_id = parent_id;
-    this.next_id = next_id;
-    this.next_idx = next_idx;
+  constructor( id, parent_id, next_ids, board_size, depth, board, boards, next_player ){
+    if( !next_ids ){ next_ids = []; }
+    if( !board ){ board = []; }
+    if( !boards ){ boards = []; }
+    this.id = ( typeof id == 'string' ? parseInt( id ) : id );
+    this.parent_id = ( typeof parent_id == 'string' ? parseInt( parent_id ) : id );
+    this.next_ids = JSON.parse( JSON.stringify( ( typeof next_ids == 'string' ? JSON.parse( next_ids ) : next_ids ) ) );
     this.board_size = board_size;
     this.depth = depth;
-    this.board = ( typeof board == 'string' ? JSON.parse( board ) : board );
-    this.boards = ( typeof boards == 'string' ? JSON.parse( boards.split( ":" ) ) : boards );
-    this.next_player = next_player;
+    this.board = JSON.parse( JSON.stringify( ( typeof board == 'string' ? JSON.parse( board ) : board ) ) );
+    this.boards = JSON.parse( JSON.stringify( ( typeof boards == 'string' ? JSON.parse( boards.split( ":" ).join( "," ) ) : boards ) ) );
+    this.next_player = ( typeof next_player == 'string' ? parseInt( next_player ) : next_player );
 
     this.next_choices = [];  //. [ [ 2, 3 ], .. ]
     this.next_choices_num = 0;
@@ -28,7 +30,7 @@ var reversi = class{
       this.findNext();
       
       //. boards
-      if( !this.boards && this.board ){
+      if( !this.boards ){
         this.calcBoards();
       }
 
@@ -39,8 +41,7 @@ var reversi = class{
 
   initBoard(){
     this.parent_id = null;
-    this.next_id = null;
-    this.next_idx = null;
+    this.next_ids = [];
     this.depth = 0;
     this.player0_count = 2;
     this.player1_count = 2;
@@ -98,8 +99,7 @@ var reversi = class{
   showBoard( game_end ){
     console.log( '' );
     console.log( 'parent_id = ' + this.parent_id );
-    console.log( 'next_id = ' + this.next_id );
-    console.log( 'next_idx = ' + this.next_idx );
+    console.log( 'next_ids = ' + JSON.stringify( this.next_ids ) );
     console.log( 'board_size = ' + this.board_size );
     console.log( 'depth = ' + this.depth );
     console.log( 'next_choices_num = ' + this.next_choices_num );
@@ -171,13 +171,16 @@ var reversi = class{
 
     if( game_end ){
       console.log( '' );
-
     }
 
     console.log( '' );
   }
 
   playerChoicable( x, y, p ){
+    if( typeof x == 'string' ){ x = parseInt( x ); }
+    if( typeof y == 'string' ){ y = parseInt( y ); }
+    if( typeof p == 'string' ){ p = parseInt( p ); }
+
     var b = false;
     var o = -1 * p;
 
@@ -215,7 +218,7 @@ var reversi = class{
           while( ( y + c ) < this.board_size && ( x - c ) >= 0 && !z && !b ){
             if( this.board[this.board_size*(y+c)+(x-c)] == 0 ){
               z = true;
-            }else if( this.board[this.board_size*(y+c)*(x-c)] == p ){
+            }else if( this.board[this.board_size*(y+c)+(x-c)] == p ){
               b = true;
             }
             c ++;
@@ -295,6 +298,10 @@ var reversi = class{
   }
 
   putChoice( x, y, p ){
+    if( typeof x == 'string' ){ x = parseInt( x ); }
+    if( typeof y == 'string' ){ y = parseInt( y ); }
+    if( typeof p == 'string' ){ p = parseInt( p ); }
+
     var b = false;
     var o = -1 * p;
 
@@ -310,6 +317,7 @@ var reversi = class{
             if( this.board[this.board_size*(y-c)+(x-c)] == 0 ){
               z = true;
             }else if( this.board[this.board_size*(y-c)+(x-c)] == p ){
+              b = true;
               for( var i = 1; i < c; i ++ ){
                 this.board[this.board_size*(y-i)*(x-i)] = p;
               }
@@ -327,6 +335,7 @@ var reversi = class{
             if( this.board[this.board_size*y+(x-c)] == 0 ){
               z = true;
             }else if( this.board[this.board_size*y+(x-c)] == p ){
+              b = true;
               for( var i = 1; i < c; i ++ ){
                 this.board[this.board_size*y+(x-i)] = p;
               }
@@ -343,7 +352,8 @@ var reversi = class{
           while( c > 1 && ( y + c ) < this.board_size && ( x - c ) >= 0 && !z ){
             if( this.board[this.board_size*(y+c)+(x-c)] == 0 ){
               z = true;
-            }else if( board[this.board_size*(y+c)+(x-c)] == p ){
+            }else if( this.board[this.board_size*(y+c)+(x-c)] == p ){
+              b = true;
               for( var i = 1; i < c; i ++ ){
                 this.board[this.board_size*(y+i)+(x-i)] = p;
               }
@@ -358,10 +368,11 @@ var reversi = class{
       if( y > 0 && this.board[this.board_size*(y-1)+x] == o ){
         var c = 2;
         var z = false;
-        while( c > 1 && ( y - c ) >= 0  && !z){
+        while( c > 1 && ( y - c ) >= 0 && !z){
           if( this.board[this.board_size*(y-c)+x] == 0 ){
             z = true;
           }else if( this.board[this.board_size*(y-c)+x] == p ){
+            b = true;
             for( var i = 1; i < c; i ++ ){
               this.board[this.board_size*(y-i)+x] = p;
             }
@@ -376,9 +387,10 @@ var reversi = class{
         var c = 2;
         var z = false;
         while( c > 1 && ( y + c ) < this.board_size && !z ){
-          if( this.board[this.board_size+(y+c)+x] == 0 ){
+          if( this.board[this.board_size*(y+c)+x] == 0 ){
             z = true;
           }else if( this.board[this.board_size*(y+c)+x] == p ){
+            b = true;
             for( var i = 1; i < c; i ++ ){
               this.board[this.board_size*(y+i)+x] = p;
             }
@@ -397,6 +409,7 @@ var reversi = class{
             if( this.board[this.board_size*(y-c)+(x+c)] == 0 ){
               z = true;
             }else if( this.board[this.board_size*(y-c)+(x+c)] == p ){
+              b = true;
               for( var i = 1; i < c; i ++ ){
                 this.board[this.board_size*(y-i)+(x+i)] = p;
               }
@@ -414,6 +427,7 @@ var reversi = class{
             if( this.board[this.board_size*y+(x+c)] == 0 ){
               z = true;
             }else if( this.board[this.board_size*y+(x+c)] == p ){
+              b = true;
               for( var i = 1; i < c; i ++ ){
                 this.board[this.board_size*y+(x+i)] = p;
               }
@@ -443,7 +457,7 @@ var reversi = class{
       }
 
       this.parent_id = this.id;
-      this.id = 'xxx';
+      //this.id = this.id + 'x';
 
       this.depth ++;
 
@@ -462,7 +476,7 @@ var reversi = class{
     }
 
     if( b ){
-      var r = new reversi( this.id + 'x', this.id, null, null, this.board_size, this.board, this.boards, this.next_player );
+      var r = new reversi( this.id, this.parent_id, null, this.board_size, this.depth, this.board, this.boards, this.next_player );
       return r;
     }else{
       return this;
@@ -529,6 +543,7 @@ var reversi = class{
       }
     }
     this.next_choices_num = this.next_choices.length;
+    this.next_ids = new Array( this.next_choices_num );
   }
 
   checkNext(){
