@@ -137,7 +137,7 @@ api.createReversis = function( reversis ){
             var reversi = new Reversi( reversis[i].id, reversis[i].parent_id, reversis[i].next_ids, reversis[i].board_size, reversis[i].depth, reversis[i].board, reversis[i].boards, reversis[i].next_player );
             var result = await this.insertReversiIfNotExisted( reversi );
             if( result && result.status /*&& !result.new*/ ){
-              next_ids.push( result.id );
+              next_ids.push( result.id );  //. 作成してもしなくても id を next_ids に入れる
             }else{
               next_ids.push( null );
             }
