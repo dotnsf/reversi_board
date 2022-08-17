@@ -72,7 +72,7 @@ async function nextProcess(){
             if( r0 && r0.process_status == -1 ){
               var reversis = [];
               for( var i = 0; i < r0.next_choices.length; i ++ ){
-                var reversi0 = new Reversi( r0.id, r0.parent_id, r0.next_ids, 4, r0.depth, r0.board, null, r0.next_player );
+                var reversi0 = new Reversi( r0.id, r0.parent_id, r0.next_ids, BOARD_SIZE, r0.depth, r0.board, null, r0.next_player );
                 var choice = r0.next_choices[i];
                 var reversi1 = reversi0.putChoice( choice.x, choice.y, reversi0.next_player );
                 reversis.push( reversi1 );
