@@ -1,5 +1,6 @@
 //. bot.js
 var request = require( 'request' );
+const reversi = require('./public/reversi');
 var Reversi = require( './public/reversi' );
 
 var BOARD_SIZE = 4;

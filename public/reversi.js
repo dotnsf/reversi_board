@@ -319,7 +319,7 @@ var reversi = class{
             }else if( this.board[this.board_size*(y-c)+(x-c)] == p ){
               b = true;
               for( var i = 1; i < c; i ++ ){
-                this.board[this.board_size*(y-i)*(x-i)] = p;
+                this.board[this.board_size*(y-i)+(x-i)] = p;
               }
 
               c = 0;
@@ -346,7 +346,7 @@ var reversi = class{
           }
         }
     
-        if( y < this.board_size - 1 && this.board[this.board_size*(y+1)*(x-1)] == o ){
+        if( y < this.board_size - 1 && this.board[this.board_size*(y+1)+(x-1)] == o ){
           var c = 2;
           var z = false;
           while( c > 1 && ( y + c ) < this.board_size && ( x - c ) >= 0 && !z ){
