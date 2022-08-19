@@ -461,7 +461,7 @@ var reversi = class{
 
       this.depth ++;
 
-      //. cound
+      //. count
       this.countBoard();
       
       //. boards

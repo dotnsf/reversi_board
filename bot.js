@@ -69,6 +69,7 @@ async function nextProcess(){
       }else{
         if( body0 && body0.status && body0.client ){
           if( body0.client == 'bot' ){
+            console.log( 'bot' );
             var r0 = body0.result;
             if( r0 && r0.process_status == -1 ){
               var reversis = [];
@@ -139,7 +140,8 @@ async function nextProcess(){
                   resolve( { status: false, error: 'failed to get children.' } );
                 }
               }else{
-                resolve( { status: false, error: 'failed to get parent and/or children.' } );
+                //resolve( { status: false, error: 'failed to get parent and/or children.' } );
+                resolve( { status: true, error: 'failed to get parent and/or children.' } );
               }
             }else{
               resolve( { status: false, error: 'failed to get analytics board.' } );

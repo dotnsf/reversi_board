@@ -139,7 +139,7 @@ api.createReversis = function( reversis ){
             if( result && result.status /*&& !result.new*/ ){
               next_ids.push( result.id );  //. 作成してもしなくても id を next_ids に入れる
             }else{
-              next_ids.push( null );
+              next_ids.push( null ); //. これが next_ids に null が含まれる原因？
             }
           }
           resolve( { status: true, next_ids: next_ids } );
@@ -205,49 +205,57 @@ api.createReversis = function( reversis ){
 };
 
 api.insertReversiIfNotExisted = async function( reversi ){
+  //. 同一の board を持つ既存レコードを探す
   //. 既存レコードがなければ新規に作成し、その作成したレコードの id を返す
   return new Promise( async ( resolve, reject ) => {
     if( pg ){
-      var conn = await pg.connect();
-      if( conn ){
-        try{
-          var where = [];
-          for( var j = 0; j < reversi.boards.length; j ++ ){
-            where.push( " board = '" + JSON.stringify( reversi.boards[j] ) + "' " );
-          }
-          var sql = 'select id from reversi where ( ' + where.join( 'or' ) + ') and next_player = ' + reversi.next_player;
-          conn.query( sql, [], async function( err, result ){
-            if( err ){
-              console.log( { err } );
-              resolve( { status: false, error: err } );
-            }else{
-              if( result && result.rows && result.rows.length > 0 ){
-                //. 既存レコードが存在していたら作成せずにそのレコードの id を返す
-                var id = result.rows[0].id;
-                if( typeof id == 'string' ){ id = parseInt( id ); }
-                resolve( { status: true, id: id, new: false } );
+      var where = [];
+      for( var j = 0; j < reversi.boards.length; j ++ ){
+        where.push( " board = '" + JSON.stringify( reversi.boards[j] ) + "' " );
+      }
+
+      if( where.length > 0 ){
+        var conn = await pg.connect();
+        if( conn ){
+          try{
+            var sql = 'select id from reversi where ( ' + where.join( 'or' ) + ') and next_player = ' + reversi.next_player;
+            conn.query( sql, [], async function( err, result ){
+              if( err ){
+                console.log( { err } );
+                resolve( { status: false, error: err } );
               }else{
-                //. 既存レコードが存在していない時は作成して、そのレコードの id を返す
-                var r = await api.createReversi( reversi );
-                //console.log( 'insertReversiIf..', r );
-                if( r && r.status && r.result ){
-                  resolve( { status: true, id: r.id, new: true } );
+                if( result && result.rows && result.rows.length > 0 ){
+                  //. 既存レコードが存在していたら作成せずにそのレコードの id を返す
+                  var id = result.rows[0].id;
+                  if( typeof id == 'string' ){ id = parseInt( id ); }
+                  resolve( { status: true, id: id, new: false } );
                 }else{
-                  resolve( { status: false, error: r.error } );
+                  //. 既存レコードが存在していない時は作成して、そのレコードの id を返す
+                  var r = await api.createReversi( reversi );
+                  //console.log( 'insertReversiIf..', r );
+                  if( r && r.status && r.result ){
+                    resolve( { status: true, id: r.id, new: true } );
+                  }else{
+                    //. 既存レコードがないのに作成できなかった場合？？
+                    console.log( { r } );
+                    resolve( { status: false, error: r.error } );
+                  }
                 }
               }
+            });
+          }catch( e ){
+            console.log( e );
+            resolve( { status: false, error: err } );
+          }finally{
+            if( conn ){
+              conn.release();
             }
-          });
-        }catch( e ){
-          console.log( e );
-          resolve( { status: false, error: err } );
-        }finally{
-          if( conn ){
-            conn.release();
           }
+        }else{
+          resolve( { status: false, error: 'no connection.' } );
         }
       }else{
-        resolve( { status: false, error: 'no connection.' } );
+        resolve( { status: false, error: 'no boards information' } );
       }
     }else{
       resolve( { status: false, error: 'db not ready.' } );
@@ -412,10 +420,9 @@ api.nextProcess = async function( board_size ){
           var query = { text: sql, values: [ board_size ] };
           conn.query( query, async ( err, result ) => {
             if( err ){
-              console.log( err );
               resolve( { status: false, error: err } );
             }else{
-              if( result.rows.length == 0 ){
+              if( !result.rows || result.rows.length == 0 ){
                 //. analytics.js
                 //resolve( { status: false, error: 'no data prepared yet.' } );
                 var r0 = await this.getTarget( board_size );   // { status: true, parent: result0.rows[0], children: result1.rows }
@@ -912,51 +919,66 @@ api.getTarget = async function( board_size ){
                 resolve( { status: false, error: err } );
               }else{
                 if( result0 && result0.rows && result0.rows.length > 0 ){
-                  sql = "update reversi set value_status = -2, updated = $1 where id = $2";
-                  var t = ( new Date() ).getTime();
-                  query = { text: sql, values: [ t, result0.rows[0].id ] };
-
                   var next_ids = result0.rows[0].next_ids;
+                  //. next_ids = [null]; の場合は？
                   if( typeof next_ids == 'string' ){ next_ids = JSON.parse( next_ids ); }
-                  if( next_ids && next_ids.length > 0 ){
+                  if( next_ids && next_ids.length > 0 && nonNullExist( next_ids ) ){
+                    sql = "update reversi set value_status = -2, updated = $1 where id = $2";
+                    var t = ( new Date() ).getTime();
+                    query = { text: sql, values: [ t, result0.rows[0].id ] };
+
                     conn.query( query, function( err, result ){
                       if( err ){
                         console.log( err );
                         resolve( { status: false, error: err } );
                       }else{
-                        sql = "select id, parent_id, depth, player0_count, player1_count, value, value_status, next_player from reversi where id in (" + next_ids.join( "," ) + ") order by id";
-                        query = { text: sql, values: [] };
-                        conn.query( query, function( err1, result1 ){
-                          if( err1 ){
-                            console.log( err1 );
-      
-                            sql = "update reversi set value_status = 0, updated = $1 where id = $2";
-                            t = ( new Date() ).getTime();
-                            query = { text: sql, values: [ t, result0.rows[0].id ] };
-                            conn.query( query, function( err2, result2 ){
-                              if( err2 ){
-                                console.log( err2 );
-                                resolve( { status: false, error: err2 } );
-                              }else{
-                                resolve( { status: false, error: err1 } );
-                              }
-                            });
-                          }else{
-                            resolve( { status: true, parent: result0.rows[0], children: result1.rows } );
-                          }
-                        });
+                        var where = next_ids.join( ',' );
+                        if( where ){
+                          sql = "select id, parent_id, depth, player0_count, player1_count, value, value_status, next_player from reversi where id in (" + next_ids.join( "," ) + ") order by id";
+                          query = { text: sql, values: [] };
+                          conn.query( query, function( err1, result1 ){
+                            if( err1 ){
+                              sql = "update reversi set value_status = 0, updated = $1 where id = $2";
+                              t = ( new Date() ).getTime();
+                              query = { text: sql, values: [ t, result0.rows[0].id ] };
+                              conn.query( query, function( err2, result2 ){
+                                if( err2 ){
+                                  console.log( err2 );
+                                  resolve( { status: false, error: err2 } );
+                                }else{
+                                  resolve( { status: false, error: err1 } );
+                                }
+                              });
+                            }else{
+                              resolve( { status: true, parent: result0.rows[0], children: result1.rows } );
+                            }
+                          });
+                        }else{
+                          sql = "update reversi set value_status = 0, updated = $1 where id = $2";
+                          t = ( new Date() ).getTime();
+                          query = { text: sql, values: [ t, result0.rows[0].id ] };
+                          conn.query( query, function( err2, result2 ){
+                            if( err2 ){
+                              console.log( err2 );
+                              resolve( { status: false, error: err2 } );
+                            }else{
+                              resolve( { status: false, error: 'no next_ids specified.' } );
+                            }
+                          });
+                        }
                       }
                     });
                   }else{
+                    console.log( JSON.stringify( result0.rows[0] ) );
                     sql = "update reversi set value_status = 0, updated = $1 where id = $2";
                     t = ( new Date() ).getTime();
                     query = { text: sql, values: [ t, result0.rows[0].id ] };
                     conn.query( query, function( err2, result2 ){
                       if( err2 ){
-                        console.log( err2 );
                         resolve( { status: false, error: err2 } );
                       }else{
-                        resolve( { status: false, error: err1 } );
+                        //. これが返った場合は処理を続行してほしい
+                        resolve( { status: true, error: 'no next_ids.' } );
                       }
                     });
                   }
@@ -966,7 +988,7 @@ api.getTarget = async function( board_size ){
               }
             });
           }catch( e ){
-            console.log( e );
+                console.log( 'i' );
             resolve( { status: false, error: err } );
           }finally{
             if( conn ){
@@ -1496,6 +1518,17 @@ function convertBoards( boards ){
   }
 
   return s.join( ':' );
+}
+
+function nonNullExist( arr ){
+  var b = false;
+  if( arr && arr.length > 0 ){
+    for( var i = 0; i < arr.length && !b; i ++ ){
+      b = ( arr[i] ? true : false );
+    }
+  }
+
+  return b;
 }
 
 //. api をエクスポート
