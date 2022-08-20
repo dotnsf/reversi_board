@@ -423,11 +423,28 @@ api.nextProcess = async function( board_size ){
               resolve( { status: false, error: err } );
             }else{
               if( !result.rows || result.rows.length == 0 ){
-                //. analytics.js
-                //resolve( { status: false, error: 'no data prepared yet.' } );
-                var r0 = await this.getTarget( board_size );   // { status: true, parent: result0.rows[0], children: result1.rows }
-                r0.client = 'analytics';
-                resolve( r0 );
+                //. ここで analytics 判定する前に next_ids の null チェックが必要
+                sql = "select * from reversi where board_size = $1 and next_ids like '%null%' and process_status = 1 order by depth, updated limit 1";
+                query = { text: sql, values: [ board_size ] };
+                conn.query( query, async ( err, result ) => {
+                  if( err ){
+                    console.log( err );
+                    resolve( { status: false, client: 'bot', error: err } );
+                  }else{
+                    if( result.rows.length == 0 ){
+                      //. analytics.js
+                      var r0 = await this.getTarget( board_size );   // { status: true, parent: result0.rows[0], children: result1.rows }
+                      r0.client = 'analytics';
+                      resolve( r0 );
+                    }else{
+                      //. 見つかった
+                      var r0 = result.rows[0];   
+                      var reversi0 = new Reversi( r0.id, r0.parent_id, r0.next_ids, r0.board_size, r0.depth, r0.board, r0.boards, r0.next_player );
+                      reversi0.changeStatus( -1 );
+                      resolve( { status: true, client: 'bot', result: reversi0 } );
+                    }
+                  }
+                });
               }else{
                 //. bot.js
                 //. 特定の board_size 値を持っているレコードの中で、 ( process_status = 0 || ( process_status = -1 && updated + 60000 < t ) を満たしているレコードを探す
@@ -464,26 +481,8 @@ api.nextProcess = async function( board_size ){
                                 resolve( { status: false, client: 'bot', error: err } );
                               }else{
                                 if( result.rows.length == 0 ){
-                                  //. 解析終了、だと思うが、最後に next_ids に null が含まれたままのケースが考えられる。
-                                  sql = "select * from reversi where board_size = $1 and next_ids like '%null%' and process_status = 1 order by depth, updated limit 1";
-                                  query = { text: sql, values: [ board_size ] };
-                                  conn.query( query, async ( err, result ) => {
-                                    if( err ){
-                                      console.log( err );
-                                      resolve( { status: false, client: 'bot', error: err } );
-                                    }else{
-                                      if( result.rows.length == 0 ){
-                                        //. 解析終了
-                                        resolve( { status: true, client: 'bot', result: null } );
-                                      }else{
-                                        //. 見つかった
-                                        var r0 = result.rows[0];   
-                                        var reversi0 = new Reversi( r0.id, r0.parent_id, r0.next_ids, r0.board_size, r0.depth, r0.board, r0.boards, r0.next_player );
-                                        reversi0.changeStatus( -1 );
-                                        resolve( { status: true, client: 'bot', result: reversi0 } );
-                                      }
-                                    }
-                                  });
+                                  //. 解析終了
+                                  resolve( { status: true, client: 'bot', result: null } );
                                 }else{
                                   //. 見つかった
                                   var r0 = result.rows[0];   
