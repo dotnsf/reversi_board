@@ -99,8 +99,11 @@ async function nextProcess(){
             }
           }else if( body0.client == 'analytics' ){
             console.log( 'analytics' );
-            var r = JSON.parse( JSON.stringify( body0 ) ); //. { status: true, error: 'no next_ids.', client: 'analytics' }
-            if( r && r.status ){
+            var r = JSON.parse( JSON.stringify( body0 ) );
+            //. r = { status: true, parent: { id: 13899, parent_id: 8253, next_ids: "[18298]", depth: 11, next_choices: "[{x:0,y:3}]", .. }, children: [], client: 'analytics' } （id = 18298 のレコードは存在しない・・・、しかも replicas=10 で再現性あり）
+            //. id = 18298 の前後にレコードは存在しているのに、この id は存在していない
+            console.log( { r } );
+            if( r && r.status ){  
               if( r.parent && r.children ){
                 var parent = body0.parent;
                 var children = body0.children;
@@ -137,6 +140,7 @@ async function nextProcess(){
                     }
                   });
                 }else{
+                  //. ここに来てしまう・・・
                   resolve( { status: false, error: 'failed to get children.' } );
                 }
               }else{

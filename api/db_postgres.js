@@ -65,6 +65,7 @@ api.use( express.Router() );
 
 //. Create
 //. 初期状態は全ての board_size であらかじめ格納済みにしておく必要あり
+//. この返り値の id が問題になっている(2022/08/21)
 api.createReversi = async function( reversi ){
   return new Promise( async ( resolve, reject ) => {
     if( pg ){
@@ -86,13 +87,47 @@ api.createReversi = async function( reversi ){
           if( typeof reversi.next_ids == 'object' ){ reversi.next_ids = JSON.stringify( reversi.next_ids ); }
           if( typeof reversi.board == 'object' ){ reversi.board = JSON.stringify( reversi.board ); }
           if( typeof reversi.next_choices == 'object' ){ reversi.next_choices = JSON.stringify( reversi.next_choices ); }
-          var query = { text: sql, values: [ reversi.parent_id, reversi.next_ids, reversi.board_size, reversi.depth, reversi.board, reversi.next_choices, reversi.next_choices_num, reversi.process_status, reversi.player0_count, reversi.player1_count, reversi.next_player, reversi.value, reversi.value_status, reversi.created, reversi.updated ] };
-          conn.query( query, function( err, result ){
-            if( err ){
-              console.log( 'createReversi: err', err );
-              resolve( { status: false, error: err } );
-            }else{
-              //. INSERT したレコードの ID が欲しい
+
+          //. INSERT したレコードの ID が欲しい
+          //. 加えて、この ID のレコードが確実に存在していてほしい
+          var b = false;
+          var id = null;
+          for( var i = 0; i < 20 && !b; i ++ ){  //. 20回を上限にリトライする
+            var query = { text: sql, values: [ reversi.parent_id, reversi.next_ids, reversi.board_size, reversi.depth, reversi.board, reversi.next_choices, reversi.next_choices_num, reversi.process_status, reversi.player0_count, reversi.player1_count, reversi.next_player, reversi.value, reversi.value_status, reversi.created, reversi.updated ] };
+            conn.query( query, function( err, result ){
+              if( err ){
+                console.log( 'createReversi: err', err );
+                //resolve( { status: false, error: err } );
+              }else{
+                var sql0 = "select currval('reversi_id_seq')";
+                var query0 = { text: sql0, values: [] };
+                conn.query( query0, function( err0, result0 ){
+                  if( result0 && result0.rows && result0.rows.length ){
+                    id = result0.rows[0].currval;
+                    if( typeof id == 'string' ){ id = parseInt( id ); }
+                    if( id ){
+                      var sql1 = 'select * from reversi where id = $1';
+                      var query1 = { text: sql1, values: [ id ] };
+                      conn.query( query1, function( err1, result1 ){
+                        if( result1 && result1.rows && result1.rows.length ){
+                          b = true;
+                        }else{
+                          //. 直前に作ったレコードはすべて消すべき？でも存在していない？？
+                        }
+                      });
+                    }
+                  }
+                });
+              }
+            });
+          }
+
+          if( b && id ){
+            resolve( { status: true, id: id, result: result } );
+          }else{
+            resolve( { status: false, error: 'too many retries failed.' } );
+          }
+              /*
               var sql0 = "select currval('reversi_id_seq')";
               var query0 = { text: sql0, values: [] };
               conn.query( query0, function( err0, result0 ){
@@ -105,8 +140,7 @@ api.createReversi = async function( reversi ){
                   resolve( { status: true, id: 0, result: result } );
                 }
               });
-            }
-          });
+              */
         }catch( e ){
           console.log( e );
           resolve( { status: false, error: err } );
@@ -136,7 +170,7 @@ api.createReversis = function( reversis ){
           for( var i = 0; i < reversis.length; i ++ ){
             var reversi = new Reversi( reversis[i].id, reversis[i].parent_id, reversis[i].next_ids, reversis[i].board_size, reversis[i].depth, reversis[i].board, reversis[i].boards, reversis[i].next_player );
             var result = await this.insertReversiIfNotExisted( reversi );
-            if( result && result.status /*&& !result.new*/ ){
+            if( result && result.status ){
               next_ids.push( result.id );  //. 作成してもしなくても id を next_ids に入れる
             }else{
               next_ids.push( null ); //. これが next_ids に null が含まれる原因？
@@ -207,6 +241,7 @@ api.createReversis = function( reversis ){
 api.insertReversiIfNotExisted = async function( reversi ){
   //. 同一の board を持つ既存レコードを探す
   //. 既存レコードがなければ新規に作成し、その作成したレコードの id を返す
+  //. ここで返す id として存在していないレコードがある？？
   return new Promise( async ( resolve, reject ) => {
     if( pg ){
       var where = [];
