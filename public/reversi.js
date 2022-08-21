@@ -1,11 +1,11 @@
 //. reversi.js
 var reversi = class{
   constructor( id, parent_id, next_ids, board_size, depth, board, boards, next_player ){
+    this.id = id;
+    this.parent_id = parent_id;
     if( !next_ids ){ next_ids = []; }
     if( !board ){ board = []; }
     if( !boards ){ boards = []; }
-    this.id = ( typeof id == 'string' ? parseInt( id ) : id );
-    this.parent_id = ( typeof parent_id == 'string' ? parseInt( parent_id ) : id );
     this.next_ids = JSON.parse( JSON.stringify( ( typeof next_ids == 'string' ? JSON.parse( next_ids ) : next_ids ) ) );
     this.board_size = board_size;
     this.depth = depth;

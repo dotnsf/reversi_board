@@ -72,7 +72,7 @@ api.createReversi = async function( reversi ){
       var conn = await pg.connect();
       if( conn ){
         try{
-          var sql = 'insert into reversi( parent_id, next_ids, board_size, depth, board, next_choices, next_choices_num, process_status, player0_count, player1_count, next_player, value, value_status, created, updated ) values ( $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15 )';
+          var sql = 'insert into reversi( id, parent_id, next_ids, board_size, depth, board, next_choices, next_choices_num, process_status, player0_count, player1_count, next_player, value, value_status, created, updated ) values ( $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16 )';
           var t = ( new Date() ).getTime();
           reversi.created = t;
           reversi.updated = t;
@@ -89,58 +89,18 @@ api.createReversi = async function( reversi ){
           if( typeof reversi.next_choices == 'object' ){ reversi.next_choices = JSON.stringify( reversi.next_choices ); }
 
           //. INSERT したレコードの ID が欲しい
-          //. 加えて、この ID のレコードが確実に存在していてほしい
-          var b = false;
-          var id = null;
-          for( var i = 0; i < 20 && !b; i ++ ){  //. 20回を上限にリトライする
-            var query = { text: sql, values: [ reversi.parent_id, reversi.next_ids, reversi.board_size, reversi.depth, reversi.board, reversi.next_choices, reversi.next_choices_num, reversi.process_status, reversi.player0_count, reversi.player1_count, reversi.next_player, reversi.value, reversi.value_status, reversi.created, reversi.updated ] };
-            conn.query( query, function( err, result ){
-              if( err ){
-                console.log( 'createReversi: err', err );
-                //resolve( { status: false, error: err } );
-              }else{
-                var sql0 = "select currval('reversi_id_seq')";
-                var query0 = { text: sql0, values: [] };
-                conn.query( query0, function( err0, result0 ){
-                  if( result0 && result0.rows && result0.rows.length ){
-                    id = result0.rows[0].currval;
-                    if( typeof id == 'string' ){ id = parseInt( id ); }
-                    if( id ){
-                      var sql1 = 'select * from reversi where id = $1';
-                      var query1 = { text: sql1, values: [ id ] };
-                      conn.query( query1, function( err1, result1 ){
-                        if( result1 && result1.rows && result1.rows.length ){
-                          b = true;
-                        }else{
-                          //. 直前に作ったレコードはすべて消すべき？でも存在していない？？
-                        }
-                      });
-                    }
-                  }
-                });
-              }
-            });
-          }
-
-          if( b && id ){
-            resolve( { status: true, id: id, result: result } );
-          }else{
-            resolve( { status: false, error: 'too many retries failed.' } );
-          }
-              /*
-              var sql0 = "select currval('reversi_id_seq')";
-              var query0 = { text: sql0, values: [] };
-              conn.query( query0, function( err0, result0 ){
-                if( result0 && result0.rows && result0.rows.length ){
-                  var id = result0.rows[0].currval;
-                  if( typeof id == 'string' ){ id = parseInt( id ); }
-                  resolve( { status: true, id: id, result: result } );
-                }else{
-                  //. この場合、何を返すべき？
-                  resolve( { status: true, id: 0, result: result } );
-                }
-              });
-              */
+          var id = uuidv4();
+          reversi.id = id;
+          var query = { text: sql, values: [ reversi.id, reversi.parent_id, reversi.next_ids, reversi.board_size, reversi.depth, reversi.board, reversi.next_choices, reversi.next_choices_num, reversi.process_status, reversi.player0_count, reversi.player1_count, reversi.next_player, reversi.value, reversi.value_status, reversi.created, reversi.updated ] };
+          conn.query( query, function( err, result ){
+            if( err ){
+              console.log( 'createReversi: err', err );
+              resolve( { status: false, error: err } );
+            }else{
+              //console.log( 'createReversi:' + JSON.stringify( result ) );
+              resolve( { status: true, id: reversi.id, result: result } );
+            }
+          });
         }catch( e ){
           console.log( e );
           resolve( { status: false, error: err } );
@@ -177,50 +137,6 @@ api.createReversis = function( reversis ){
             }
           }
           resolve( { status: true, next_ids: next_ids } );
-
-          /*
-          var params = [];
-          for( var i = 0; i < reversis.length; i ++ ){
-            var t = ( new Date() ).getTime();
-            reversis[i].created = t;
-            reversis[i].updated = t;
-            if( reversis[i].next_choices_num == 0 ){
-              reversis[i].value = reversis[i].player0_count - reversis[i].player1_count;
-              reversis[i].value_status = 1;
-            }else{
-              reversis[i].value = null;
-              reversis[i].value_status = 0;
-            }
-
-            if( typeof reversis[i].next_ids == 'object' ){ reversis[i].next_ids = JSON.stringify( reversis[i].next_ids ); }
-            if( typeof reversis[i].board == 'object' ){ reversis[i].board = JSON.stringify( reversis[i].board ); }
-            if( typeof reversis[i].next_choices == 'object' ){ reversis[i].next_choices = JSON.stringify( reversis[i].next_choices ); }
-
-            params.push( [ reversis[i].parent_id, reversis[i].next_ids, reversis[i].board_size, reversis[i].depth, reversis[i].board, reversis[i].next_choices, reversis[i].next_choices_num, reversis[i].process_status, reversis[i].player0_count, reversis[i].player1_count, reversis[i].next_player, reversis[i].value, reversis[i].value_status, reversis[i].created, reversis[i].updated ] );
-          }
-
-          //. #30
-          var sql = 'insert into reversi( parent_id, next_ids, board_size, depth, board, next_choices, next_choices_num, process_status, player0_count, player1_count, next_player, value, value_status, created, updated )';
-          for( var i = 0; i < reversis.length; i ++ ){
-            var select = " select " + reversis[i].parent_id + ", '" + reversis[i].next_ids + "', " + reversis[i].board_size + ", " + reversis[i].depth + ", '" + reversis[i].board + "', '" + reversis[i].next_choices + "', " + reversis[i].next_choices_num + ", " + reversis[i].process_status + ", " + reversis[i].player0_count + ", " + reversis[i].player1_count + ", " + reversis[i].next_player + ", " + reversis[i].value + ", " + reversis[i].value_status + ", " + reversis[i].created + ", " + reversis[i].updated;
-            if( i < reversis.length - 1 ){
-              select += " union all";
-            }
-            sql += select;
-          }
-          sql += " on conflict ( board, next_player ) do nothing";
-
-          conn.query( sql, [], function( err, result ){
-            if( err ){
-              //. "error: duplicate key value violates unique constraint "reversi_pkey""" ??
-              //. ↑これが発生しても１分後に再処理するので気にしなくていい？
-              console.log( 'bulk insert', err );
-              resolve( { status: true, results: null } );
-            }else{
-              resolve( { status: true, results: result } );
-            }
-          });
-          */
         }catch( e ){
           console.log( e );
           resolve( { status: false, error: err } );
@@ -262,7 +178,6 @@ api.insertReversiIfNotExisted = async function( reversi ){
                 if( result && result.rows && result.rows.length > 0 ){
                   //. 既存レコードが存在していたら作成せずにそのレコードの id を返す
                   var id = result.rows[0].id;
-                  if( typeof id == 'string' ){ id = parseInt( id ); }
                   resolve( { status: true, id: id, new: false } );
                 }else{
                   //. 既存レコードが存在していない時は作成して、そのレコードの id を返す
@@ -458,6 +373,7 @@ api.nextProcess = async function( board_size ){
               resolve( { status: false, error: err } );
             }else{
               if( !result.rows || result.rows.length == 0 ){
+                /*
                 //. ここで analytics 判定する前に next_ids の null チェックが必要
                 sql = "select * from reversi where board_size = $1 and next_ids like '%null%' and process_status = 1 order by depth, updated limit 1";
                 query = { text: sql, values: [ board_size ] };
@@ -467,10 +383,12 @@ api.nextProcess = async function( board_size ){
                     resolve( { status: false, client: 'bot', error: err } );
                   }else{
                     if( result.rows.length == 0 ){
+                */
                       //. analytics.js
                       var r0 = await this.getTarget( board_size );   // { status: true, parent: result0.rows[0], children: result1.rows }
                       r0.client = 'analytics';
                       resolve( r0 );
+                /*
                     }else{
                       //. 見つかった
                       var r0 = result.rows[0];   
@@ -480,6 +398,7 @@ api.nextProcess = async function( board_size ){
                     }
                   }
                 });
+                */
               }else{
                 //. bot.js
                 //. 特定の board_size 値を持っているレコードの中で、 ( process_status = 0 || ( process_status = -1 && updated + 60000 < t ) を満たしているレコードを探す
@@ -963,7 +882,7 @@ api.getTarget = async function( board_size ){
         if( conn ){
           try{
             var t = ( new Date() ).getTime();
-            var sql = "select id, parent_id, next_ids, board_size, depth, board, next_choices, next_choices_num, process_status, player0_count, player1_count, next_player, value, value_status, next_player, created, updated from reversi where board_size = $1 and depth = ( select max(depth) from reversi where ( value_status = 0 or ( value_status = -2 and updated + 60000 < $2 ) ) ) and ( value_status = 0 or ( value_status = -2 and updated + 60000 < $3 ) ) order by depth desc, id limit 1";
+            var sql = "select id, parent_id, next_ids, board_size, depth, board, next_choices, next_choices_num, process_status, player0_count, player1_count, next_player, value, value_status, next_player, created, updated from reversi where board_size = $1 and depth = ( select max(depth) from reversi where ( value_status = 0 or ( value_status = -2 and updated + 60000 < $2 ) ) ) and ( value_status = 0 or ( value_status = -2 and updated + 60000 < $3 ) ) order by depth desc, created limit 1";
             var query = { text: sql, values: [ board_size, t, t ] };
             conn.query( query, function( err, result0 ){
               if( err ){
@@ -984,9 +903,9 @@ api.getTarget = async function( board_size ){
                         console.log( err );
                         resolve( { status: false, error: err } );
                       }else{
-                        var where = next_ids.join( ',' );
+                        var where = next_ids.join( "','" );
                         if( where ){
-                          sql = "select id, parent_id, depth, player0_count, player1_count, value, value_status, next_player from reversi where id in (" + next_ids.join( "," ) + ") order by id";
+                          sql = "select id, parent_id, depth, player0_count, player1_count, value, value_status, next_player from reversi where id in ('" + where + "') order by created";
                           query = { text: sql, values: [] };
                           conn.query( query, function( err1, result1 ){
                             if( err1 ){
@@ -1040,7 +959,6 @@ api.getTarget = async function( board_size ){
               }
             });
           }catch( e ){
-                console.log( 'i' );
             resolve( { status: false, error: err } );
           }finally{
             if( conn ){
