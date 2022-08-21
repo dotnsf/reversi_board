@@ -67,7 +67,7 @@ async function nextProcess(){
       if( err0 ){
         resolve( { status: false, error: err0 } );
       }else{
-        //console.log( { body0 } );
+        console.log( { body0 } );
         if( body0 && body0.status && body0.client ){
           if( body0.client == 'bot' ){
             console.log( 'bot' );
@@ -101,8 +101,6 @@ async function nextProcess(){
           }else if( body0.client == 'analytics' ){
             console.log( 'analytics' );
             var r = JSON.parse( JSON.stringify( body0 ) );
-            //. r = { status: true, parent: { id: 13899, parent_id: 8253, next_ids: "[18298]", depth: 11, next_choices: "[{x:0,y:3}]", .. }, children: [], client: 'analytics' } （id = 18298 のレコードは存在しない・・・、しかも replicas=10 で再現性あり）
-            //. id = 18298 の前後にレコードは存在しているのに、この id は存在していない
             //console.log( { r } );
             if( r && r.status ){  
               if( r.parent && r.children ){

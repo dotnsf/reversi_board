@@ -373,7 +373,6 @@ api.nextProcess = async function( board_size ){
               resolve( { status: false, error: err } );
             }else{
               if( !result.rows || result.rows.length == 0 ){
-                /*
                 //. ここで analytics 判定する前に next_ids の null チェックが必要
                 sql = "select * from reversi where board_size = $1 and next_ids like '%null%' and process_status = 1 order by depth, updated limit 1";
                 query = { text: sql, values: [ board_size ] };
@@ -383,12 +382,10 @@ api.nextProcess = async function( board_size ){
                     resolve( { status: false, client: 'bot', error: err } );
                   }else{
                     if( result.rows.length == 0 ){
-                */
                       //. analytics.js
                       var r0 = await this.getTarget( board_size );   // { status: true, parent: result0.rows[0], children: result1.rows }
                       r0.client = 'analytics';
                       resolve( r0 );
-                /*
                     }else{
                       //. 見つかった
                       var r0 = result.rows[0];   
@@ -398,7 +395,6 @@ api.nextProcess = async function( board_size ){
                     }
                   }
                 });
-                */
               }else{
                 //. bot.js
                 //. 特定の board_size 値を持っているレコードの中で、 ( process_status = 0 || ( process_status = -1 && updated + 60000 < t ) を満たしているレコードを探す
@@ -948,6 +944,7 @@ api.getTarget = async function( board_size ){
                       if( err2 ){
                         resolve( { status: false, error: err2 } );
                       }else{
+                        //. result0.rows[0].next_ids = [null]
                         //. これが返った場合は処理を続行してほしい
                         resolve( { status: true, error: 'no next_ids.' } );
                       }
